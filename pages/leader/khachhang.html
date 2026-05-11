@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý khách hàng — Leader | TN Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
+    table tbody tr { transition: background-color 0.15s ease; }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-panel { animation: modalIn 180ms ease-out; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .toast-show { animation: toastIn 220ms ease-out; }
+  </style>
+</head>
+<body class="bg-[#F0F4F4]">
+  <!-- Sidebar -->
+  <div id="sidebar"></div>
+
+  <!-- Header dùng chung -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+    <div class="flex items-center gap-2">
+      <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" class="relative p-2 rounded-full hover:bg-slate-100 transition" aria-label="Thông báo">
+        <i data-lucide="bell" class="w-5 h-5 text-slate-600" stroke-width="1.5"></i>
+        <span id="bell-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#EF4444] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">0</span>
+      </button>
+      <div id="header-user" class="flex items-center gap-2 px-2"></div>
+      <button onclick="logout()" type="button"
+        class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+    <div class="max-w-screen-xl mx-auto px-6 py-6">
+
+      <!-- 1. Page header -->
+      <div class="flex items-start justify-between mb-6 gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-[#060D10]">Quản lý khách hàng</h1>
+          <p class="text-sm text-[#64748B] mt-1">Danh sách khách hàng đang được phục vụ</p>
+        </div>
+        <button onclick="openAddModal()" type="button"
+          class="bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm flex-shrink-0">
+          <i data-lucide="plus" class="w-4 h-4" stroke-width="2"></i>
+          Thêm khách hàng
+        </button>
+      </div>
+
+      <!-- 2. Stats mini -->
+      <div id="stats-mini" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"></div>
+
+      <!-- 3. Toolbar -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex flex-wrap items-center gap-3">
+        <div class="relative flex-1 min-w-[240px] max-w-md">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+          <input id="search-input" type="text"
+            placeholder="Tìm theo tên khách hàng..."
+            class="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition" />
+        </div>
+        <select id="filter-status"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả trạng thái</option>
+          <option value="active">Hoạt động</option>
+          <option value="paused">Tạm ngưng</option>
+        </select>
+        <select id="filter-ns"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả nhân sự</option>
+        </select>
+        <div id="total-count" class="ml-auto text-sm text-slate-600 font-medium">Tổng: 0 KH</div>
+      </div>
+
+      <!-- 4. Bảng KH -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-[#F8FAFB] text-slate-600">
+              <tr>
+                <th class="text-left font-medium px-4 py-3 w-12">STT</th>
+                <th class="text-left font-medium px-4 py-3">Tên khách hàng</th>
+                <th class="text-left font-medium px-4 py-3">Nhân sự phụ trách</th>
+                <th class="text-left font-medium px-4 py-3">TKQC</th>
+                <th class="text-left font-medium px-4 py-3">Fanpage</th>
+                <th class="text-left font-medium px-4 py-3">Tổng tài nguyên</th>
+                <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                <th class="text-right font-medium px-4 py-3">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="kh-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <div id="pagination"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ===== Modal: Thêm / Sửa khách hàng ===== -->
+  <div id="add-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md modal-panel max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 id="add-modal-title" class="text-lg font-semibold text-[#060D10]">Thêm khách hàng mới</h2>
+          <button onclick="closeAddModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-3 overflow-y-auto flex-1">
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">
+              Tên khách hàng <span class="text-[#EF4444]">*</span>
+            </label>
+            <input id="add-name" type="text" placeholder="VD: Công ty ABC"
+              class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Email liên hệ</label>
+            <input id="add-email" type="email" placeholder="lienhe@congty.com"
+              class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Số điện thoại</label>
+            <input id="add-phone" type="tel" placeholder="0901 234 567"
+              class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Nhân sự phụ trách</label>
+            <select id="add-ns"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none bg-white">
+              <option value="">-- Chọn nhân sự --</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-700 mb-1">Ghi chú</label>
+            <textarea id="add-note" rows="3" placeholder="Ghi chú thêm về khách hàng..."
+              class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none resize-none"></textarea>
+          </div>
+          <!-- Lỗi validation -->
+          <div id="add-error" class="hidden text-xs text-[#EF4444] bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+          <button onclick="closeAddModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Hủy</button>
+          <button id="add-confirm-btn" onclick="confirmAdd()" type="button"
+            class="px-4 py-2 text-sm font-medium bg-[#21A691] hover:bg-[#1A8A78] text-white rounded-lg transition">Thêm mới</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Chi tiết khách hàng (3 tabs) ===== -->
+  <div id="detail-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl modal-panel max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div class="flex items-center gap-3">
+            <h2 id="detail-title" class="text-lg font-semibold text-[#060D10]">—</h2>
+            <span id="detail-status-badge"></span>
+          </div>
+          <button onclick="closeDetailModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <div class="px-6 py-2 border-b border-slate-200 bg-[#F8FAFB] text-xs text-slate-600">
+          Phụ trách: <span id="detail-ns-name" class="font-medium text-[#060D10]">—</span>
+        </div>
+        <!-- Tabs -->
+        <div class="px-6 pt-3 border-b border-slate-200">
+          <div class="flex gap-1">
+            <button onclick="switchDetailTab('overview')" data-detail-tab="overview" type="button"
+              class="px-3 py-2.5 border-b-2 border-[#21A691] text-[#21A691] font-medium text-sm transition">
+              Tổng quan
+            </button>
+            <button onclick="switchDetailTab('tkqc')" data-detail-tab="tkqc" type="button"
+              class="px-3 py-2.5 border-b-2 border-transparent text-slate-600 hover:text-slate-800 font-medium text-sm transition">
+              TKQC
+            </button>
+            <button onclick="switchDetailTab('fanpage')" data-detail-tab="fanpage" type="button"
+              class="px-3 py-2.5 border-b-2 border-transparent text-slate-600 hover:text-slate-800 font-medium text-sm transition">
+              Fanpage
+            </button>
+          </div>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1">
+          <div id="detail-tab-content"></div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+          <button onclick="closeDetailModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Confirm dialog (dùng chung cho thu hồi tài nguyên) ===== -->
+  <div id="confirm-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md modal-panel">
+        <div class="p-6">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="alert-triangle" class="w-5 h-5 text-[#EF4444]"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 id="confirm-title" class="text-base font-semibold text-[#060D10] mb-1">Xác nhận</h3>
+              <p id="confirm-message" class="text-sm text-slate-600">—</p>
+              <!-- BR-06: checkbox xác nhận khi thu hồi tài nguyên đang active -->
+              <label id="confirm-br06-wrap" class="hidden mt-3 flex items-start gap-2 text-xs text-slate-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 cursor-pointer">
+                <input id="confirm-br06" type="checkbox" class="mt-0.5 w-3.5 h-3.5 rounded border-slate-300 text-[#EF4444] focus:ring-[#EF4444]" />
+                <span>Tôi hiểu rằng tài nguyên này đang <b>hoạt động</b>, việc thu hồi có thể ảnh hưởng đến chiến dịch của khách hàng.</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+          <button onclick="closeConfirm()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 rounded-lg transition">Hủy</button>
+          <button id="confirm-yes-btn" type="button"
+            class="px-4 py-2 text-sm font-medium bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">Xác nhận</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Toast ===== -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2">
+    <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5 text-[#21A691]"></i>
+    <span id="toast-message" class="text-sm font-medium text-[#060D10]">—</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../assets/js/auth.js"></script>
+  <script src="../../assets/js/data.js"></script>
+  <script src="../../components/sidebar.js"></script>
+  <script src="../../assets/js/pagination.js"></script>
+
+  <script>
+    // 0. Bảo vệ + sidebar
+    checkAuth('leader');
+    renderSidebar('leader');
+
+    // 1. Render header user
+    (function renderHeaderUser() {
+      const user = getCurrentUser();
+      if (!user) return;
+      document.getElementById('header-user').innerHTML = `
+        <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
+        <div class="w-9 h-9 rounded-full bg-[#21A691] text-white font-semibold flex items-center justify-center">
+          ${user.name.charAt(0).toUpperCase()}
+        </div>
+      `;
+      // Bell badge — số cảnh báo chưa xử lý (dynamic từ data.js)
+      const count = CANH_BAO.filter((c) => c.trangThai === 'chua_xu_ly').length;
+      const badge = document.getElementById('bell-badge');
+      if (badge) {
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    })();
+
+    // 2. Mock — thông tin liên hệ thêm cho mỗi khách hàng (data.js không có)
+    const KH_CONTACT = {
+      KH001: { email: 'lienhe@congtyabc.com', phone: '028 1234 5678', diaChi: 'Quận 1, TP.HCM' },
+      KH002: { email: 'hello@startupxyz.com', phone: '028 9876 5432', diaChi: 'Quận 3, TP.HCM' },
+      KH003: { email: 'shop@def.vn',         phone: '0901 234 567',  diaChi: 'Quận 7, TP.HCM' },
+      KH004: { email: 'contact@agencyghi.vn', phone: '0908 765 432',  diaChi: 'Hai Bà Trưng, Hà Nội' },
+      KH005: { email: 'info@ctyjkl.vn',      phone: '0912 345 678',  diaChi: 'Cầu Giấy, Hà Nội' }
+    };
+
+    // 3. Helpers
+    function refreshIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    }
+    function formatNumber(n) { return Number(n).toLocaleString('vi-VN'); }
+    function formatVND(n) { return Number(n).toLocaleString('vi-VN') + 'đ'; }
+
+    // Lookup nhanh
+    const bmMap = Object.fromEntries(BM.map((b) => [b.id, b.ten]));
+    const nsByEmail = Object.fromEntries(NHAN_SU.map((n) => [n.email, n.ten]));
+
+    // Tính số liệu thực của 1 KH dựa trên TKQC + FANPAGE thực tế
+    function khStats(khId) {
+      const tkqcs = TKQC.filter((t) => t.maKH === khId);
+      const fanpages = FANPAGE.filter((f) => f.maKH === khId);
+      return {
+        soTKQC: tkqcs.length,
+        soFanpage: fanpages.length,
+        soVIA: tkqcs.reduce((s, t) => s + t.soVIA, 0),
+        tkqcs,
+        fanpages
+      };
+    }
+
+    // Badge trạng thái KH (active / paused)
+    function statusBadge(trangThai) {
+      const cfg = {
+        active: { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động' },
+        paused: { bg: '#FEF3C7', color: '#F59E0B', label: 'Tạm ngưng' }
+      }[trangThai] || { bg: '#F1F5F9', color: '#64748B', label: trangThai };
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
+    }
+
+    // 4. Stats mini
+    (function renderStatsMini() {
+      const tongKH = KHACH_HANG.length;
+      const active = KHACH_HANG.filter((k) => k.trangThai === 'active').length;
+      // Tổng tài nguyên = tổng TKQC + tổng Fanpage trên toàn hệ thống
+      const tongTaiNguyen = TKQC.length + FANPAGE.length;
+
+      const cards = [
+        { num: tongKH,        label: 'Tổng khách hàng',           icon: 'briefcase',      color: '#21A691', numColor: '#060D10' },
+        { num: active,        label: 'Đang hoạt động',            icon: 'check-circle-2', color: '#21A691', numColor: '#21A691' },
+        { num: tongTaiNguyen, label: 'Tổng tài nguyên đang gán',  icon: 'boxes',          color: '#27403E', numColor: '#27403E' }
+      ];
+      document.getElementById('stats-mini').innerHTML = cards.map((c) => `
+        <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${c.color}1A; color: ${c.color};">
+            <i data-lucide="${c.icon}" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" style="color: ${c.numColor};">${c.num}</div>
+            <div class="text-xs text-slate-500">${c.label}</div>
+          </div>
+        </div>
+      `).join('');
+    })();
+
+    // 5. Populate dropdown nhân sự (dùng cho cả filter và form Thêm KH)
+    (function populateNS() {
+      const opts = NHAN_SU.map((n) => `<option value="${n.email}">${n.ten}</option>`).join('');
+      document.getElementById('filter-ns').innerHTML += opts;
+      document.getElementById('add-ns').innerHTML += opts;
+    })();
+
+    // 6. Render bảng KH theo filter + phân trang 10/page
+    const tbody = document.getElementById('kh-tbody');
+    const totalCountEl = document.getElementById('total-count');
+    const searchInput = document.getElementById('search-input');
+    const filterStatus = document.getElementById('filter-status');
+    const filterNS = document.getElementById('filter-ns');
+    const ITEMS_PER_PAGE = 10;
+    let currentPage = 1;
+
+    function renderTable() {
+      const search = searchInput.value.toLowerCase().trim();
+      const status = filterStatus.value;
+      const ns = filterNS.value;
+
+      const filtered = KHACH_HANG.filter((k) => {
+        const matchSearch = !search || k.ten.toLowerCase().includes(search);
+        const matchStatus = status === 'all' || k.trangThai === status;
+        const matchNS = ns === 'all' || k.nhanSuPhuTrach === ns;
+        return matchSearch && matchStatus && matchNS;
+      });
+
+      const pageInfo = paginate(filtered, currentPage, ITEMS_PER_PAGE);
+      currentPage = pageInfo.currentPage;
+
+      if (pageInfo.total === 0) {
+        tbody.innerHTML = `
+          <tr><td colspan="8" class="text-center py-10 text-slate-400 text-sm">
+            <div class="flex flex-col items-center gap-2">
+              <i data-lucide="search-x" class="w-8 h-8 text-slate-300"></i>
+              Không tìm thấy khách hàng phù hợp
+            </div>
+          </td></tr>`;
+      } else {
+        tbody.innerHTML = pageInfo.items.map((k, idx) => {
+          const stats = khStats(k.id);
+          const tongTN = stats.soTKQC + stats.soFanpage;
+          const nsName = nsByEmail[k.nhanSuPhuTrach] || k.nhanSuPhuTrach;
+          const stt = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+          return `
+            <tr class="hover:bg-[#F0F4F4]">
+              <td class="px-4 py-3 text-slate-500">${stt}</td>
+              <td class="px-4 py-3 font-medium text-[#060D10]">${k.ten}</td>
+              <td class="px-4 py-3 text-slate-700">${nsName}</td>
+              <td class="px-4 py-3 text-slate-700">${stats.soTKQC}</td>
+              <td class="px-4 py-3 text-slate-700">${stats.soFanpage}</td>
+              <td class="px-4 py-3 font-semibold text-[#21A691]">${tongTN}</td>
+              <td class="px-4 py-3">${statusBadge(k.trangThai)}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center justify-end gap-1">
+                  <button onclick="openDetailModal('${k.id}')" type="button" title="Chi tiết"
+                    class="p-1.5 rounded text-slate-500 hover:text-[#21A691] hover:bg-slate-100 transition">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                  </button>
+                  <button onclick="openAddModal('${k.id}')" type="button" title="Chỉnh sửa"
+                    class="p-1.5 rounded text-slate-500 hover:text-[#21A691] hover:bg-slate-100 transition">
+                    <i data-lucide="edit" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+      totalCountEl.textContent = `Tổng: ${pageInfo.total} KH`;
+      refreshIcons();
+
+      renderPagination('pagination', pageInfo, (newPage) => {
+        currentPage = newPage;
+        renderTable();
+        const tableSection = tbody.closest('section');
+        if (tableSection) tableSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+
+    searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
+    filterStatus.addEventListener('change', () => { currentPage = 1; renderTable(); });
+    filterNS.addEventListener('change', () => { currentPage = 1; renderTable(); });
+    renderTable();
+
+    // 7. Toast
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toast-icon');
+      document.getElementById('toast-message').textContent = message;
+      const cfg = {
+        success: { icon: 'check-circle-2', color: '#21A691' },
+        warning: { icon: 'alert-triangle', color: '#F59E0B' },
+        error:   { icon: 'x-circle',       color: '#EF4444' }
+      }[type] || { icon: 'check-circle-2', color: '#21A691' };
+      icon.setAttribute('data-lucide', cfg.icon);
+      icon.style.color = cfg.color;
+      toast.classList.remove('hidden');
+      toast.classList.remove('toast-show');
+      void toast.offsetWidth;
+      toast.classList.add('toast-show');
+      refreshIcons();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // 8. Modal Thêm / Sửa KH
+    let editingKh = null;
+
+    function openAddModal(khId) {
+      const titleEl = document.getElementById('add-modal-title');
+      const btnEl = document.getElementById('add-confirm-btn');
+      const errEl = document.getElementById('add-error');
+      errEl.classList.add('hidden');
+
+      if (khId) {
+        editingKh = KHACH_HANG.find((k) => k.id === khId);
+        if (editingKh) {
+          titleEl.textContent = 'Chỉnh sửa khách hàng';
+          btnEl.textContent = 'Lưu thay đổi';
+          document.getElementById('add-name').value = editingKh.ten;
+          document.getElementById('add-email').value = (KH_CONTACT[editingKh.id] || {}).email || '';
+          document.getElementById('add-phone').value = (KH_CONTACT[editingKh.id] || {}).phone || '';
+          document.getElementById('add-ns').value = editingKh.nhanSuPhuTrach || '';
+          document.getElementById('add-note').value = '';
+        }
+      } else {
+        editingKh = null;
+        titleEl.textContent = 'Thêm khách hàng mới';
+        btnEl.textContent = 'Thêm mới';
+        ['add-name', 'add-email', 'add-phone', 'add-note'].forEach((id) => {
+          document.getElementById(id).value = '';
+        });
+        document.getElementById('add-ns').value = '';
+      }
+
+      document.getElementById('add-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeAddModal() {
+      document.getElementById('add-modal').classList.add('hidden');
+    }
+    function confirmAdd() {
+      const name = document.getElementById('add-name').value.trim();
+      const errEl = document.getElementById('add-error');
+      if (!name) {
+        errEl.textContent = 'Vui lòng nhập tên khách hàng';
+        errEl.classList.remove('hidden');
+        document.getElementById('add-name').focus();
+        return;
+      }
+      const message = editingKh
+        ? `Đã cập nhật khách hàng ${name}`
+        : `Đã thêm khách hàng mới: ${name}`;
+      closeAddModal();
+      showToast(message);
+    }
+
+    // 9. State KH đang chọn — dùng chung cho modal Chi tiết
+    let currentKh = null;
+
+    // 10. Modal Chi tiết KH (3 tabs)
+    function openDetailModal(khId) {
+      const k = KHACH_HANG.find((x) => x.id === khId);
+      if (!k) return;
+      currentKh = k;
+
+      document.getElementById('detail-title').textContent = k.ten;
+      document.getElementById('detail-status-badge').innerHTML = statusBadge(k.trangThai);
+      document.getElementById('detail-ns-name').textContent = nsByEmail[k.nhanSuPhuTrach] || k.nhanSuPhuTrach || '—';
+
+      switchDetailTab('overview');
+      document.getElementById('detail-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+      currentKh = null;
+    }
+    function switchDetailTab(tab) {
+      ['overview', 'tkqc', 'fanpage'].forEach((t) => {
+        const btn = document.querySelector(`[data-detail-tab="${t}"]`);
+        const isActive = t === tab;
+        btn.classList.toggle('border-[#21A691]', isActive);
+        btn.classList.toggle('text-[#21A691]', isActive);
+        btn.classList.toggle('border-transparent', !isActive);
+        btn.classList.toggle('text-slate-600', !isActive);
+      });
+      const container = document.getElementById('detail-tab-content');
+      if (!currentKh) { container.innerHTML = ''; return; }
+      if (tab === 'overview') {
+        container.innerHTML = renderDetailOverview(currentKh);
+      } else if (tab === 'tkqc') {
+        container.innerHTML = renderDetailTKQCs(currentKh);
+      } else {
+        container.innerHTML = renderDetailFanpages(currentKh);
+      }
+      refreshIcons();
+    }
+
+    // Tab Tổng quan
+    function renderDetailOverview(k) {
+      const contact = KH_CONTACT[k.id] || {};
+      const stats = khStats(k.id);
+      // Filter NHAT_KY có nhắc tới tên KH này
+      const events = NHAT_KY.filter((nk) => nk.hanhDong.includes(k.ten));
+
+      const NK_ICONS = {
+        gan_tai_nguyen: { icon: 'link',           color: '#21A691' },
+        canh_bao:       { icon: 'alert-triangle', color: '#EF4444' },
+        dang_nhap_via:  { icon: 'log-in',         color: '#87DF2C' },
+        xu_ly_canh_bao: { icon: 'check-circle-2', color: '#F59E0B' },
+        dong_bo:        { icon: 'refresh-cw',     color: '#27403E' }
+      };
+
+      const timelineHTML = events.length === 0
+        ? `<div class="text-center py-6 text-sm text-slate-400">
+             <i data-lucide="inbox" class="w-7 h-7 text-slate-300 mx-auto mb-1"></i>
+             Chưa có hoạt động liên quan
+           </div>`
+        : `<ul class="space-y-2">
+             ${events.map((nk) => {
+               const cfg = NK_ICONS[nk.loai] || { icon: 'circle', color: '#64748B' };
+               return `
+                 <li class="flex items-start gap-3 p-2 rounded hover:bg-[#F8FAFB]">
+                   <i data-lucide="${cfg.icon}" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color: ${cfg.color};"></i>
+                   <div class="flex-1 min-w-0">
+                     <div class="text-sm text-[#060D10]"><span class="font-semibold">${nk.nguoi}</span> ${nk.hanhDong}</div>
+                     <div class="text-xs text-slate-400">${nk.thoiGian}</div>
+                   </div>
+                 </li>
+               `;
+             }).join('')}
+           </ul>`;
+
+      return `
+        <div class="space-y-5">
+          <!-- Thông tin liên hệ -->
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-2">Thông tin liên hệ</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">
+                <div class="text-xs text-slate-500 mb-1">Email</div>
+                <div class="text-sm font-medium text-[#060D10] break-all">${contact.email || '—'}</div>
+              </div>
+              <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">
+                <div class="text-xs text-slate-500 mb-1">Số điện thoại</div>
+                <div class="text-sm font-medium text-[#060D10]">${contact.phone || '—'}</div>
+              </div>
+              <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">
+                <div class="text-xs text-slate-500 mb-1">Địa chỉ</div>
+                <div class="text-sm font-medium text-[#060D10]">${contact.diaChi || '—'}</div>
+              </div>
+            </div>
+          </div>
+          <!-- Số liệu tài nguyên -->
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-2">Tài nguyên đang phục vụ</h3>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="bg-white border border-slate-200 rounded-lg p-4 text-center">
+                <i data-lucide="credit-card" class="w-5 h-5 mx-auto text-[#21A691]" stroke-width="1.5"></i>
+                <div class="text-2xl font-bold text-[#060D10] mt-1">${stats.soTKQC}</div>
+                <div class="text-xs text-slate-500">TKQC</div>
+              </div>
+              <div class="bg-white border border-slate-200 rounded-lg p-4 text-center">
+                <i data-lucide="flag" class="w-5 h-5 mx-auto text-[#21A691]" stroke-width="1.5"></i>
+                <div class="text-2xl font-bold text-[#060D10] mt-1">${stats.soFanpage}</div>
+                <div class="text-xs text-slate-500">Fanpage</div>
+              </div>
+              <div class="bg-white border border-slate-200 rounded-lg p-4 text-center">
+                <i data-lucide="user-circle" class="w-5 h-5 mx-auto text-[#21A691]" stroke-width="1.5"></i>
+                <div class="text-2xl font-bold text-[#060D10] mt-1">${stats.soVIA}</div>
+                <div class="text-xs text-slate-500">Quyền VIA</div>
+              </div>
+            </div>
+          </div>
+          <!-- Timeline -->
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-2">Hoạt động gần đây</h3>
+            ${timelineHTML}
+          </div>
+        </div>
+      `;
+    }
+
+    // Tab TKQC
+    function renderDetailTKQCs(k) {
+      const list = TKQC.filter((t) => t.maKH === k.id);
+      if (list.length === 0) {
+        return '<p class="text-sm text-slate-400 text-center py-6">Chưa có TKQC nào được gán</p>';
+      }
+      const rows = list.map((t) => {
+        const trangThai = t.trangThai === 'active'
+          ? '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>'
+          : '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu hóa</span>';
+        return `
+          <tr class="hover:bg-[#F0F4F4]">
+            <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${t.ten}</td>
+            <td class="px-3 py-2 text-slate-700 text-sm">${formatVND(t.hanMuc)}</td>
+            <td class="px-3 py-2 text-slate-700 text-sm">${formatVND(t.chiTieu)}</td>
+            <td class="px-3 py-2">${trangThai}</td>
+            <td class="px-3 py-2 text-right">
+              <button onclick="confirmThuHoiTkqc('${t.ten}')" type="button"
+                class="px-2.5 py-1 text-xs font-medium text-[#EF4444] hover:bg-red-50 rounded transition flex items-center gap-1 ml-auto">
+                <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                Thu hồi
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      return `
+        <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+          <thead class="bg-[#F8FAFB] text-slate-600">
+            <tr>
+              <th class="text-left font-medium px-3 py-2">Tên TKQC</th>
+              <th class="text-left font-medium px-3 py-2">Hạn mức</th>
+              <th class="text-left font-medium px-3 py-2">Đã chi</th>
+              <th class="text-left font-medium px-3 py-2">Trạng thái</th>
+              <th class="text-right font-medium px-3 py-2">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+      `;
+    }
+
+    // Tab Fanpage
+    function renderDetailFanpages(k) {
+      const list = FANPAGE.filter((f) => f.maKH === k.id);
+      if (list.length === 0) {
+        return '<p class="text-sm text-slate-400 text-center py-6">Chưa có Fanpage nào được gán</p>';
+      }
+      const fpBadge = (s) => {
+        const cfg = {
+          active:     { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động' },
+          restricted: { bg: '#FEF3C7', color: '#F59E0B', label: 'Bị hạn chế' },
+          disabled:   { bg: '#FEE2E2', color: '#EF4444', label: 'Vô hiệu' }
+        }[s] || { bg: '#F1F5F9', color: '#64748B', label: s };
+        return `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
+      };
+      const rows = list.map((f) => `
+        <tr class="hover:bg-[#F0F4F4]">
+          <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${f.ten}</td>
+          <td class="px-3 py-2 text-slate-700 text-sm">${bmMap[f.maBM] || '—'}</td>
+          <td class="px-3 py-2 text-slate-700 text-sm">${formatNumber(f.followers)}</td>
+          <td class="px-3 py-2">${fpBadge(f.trangThai)}</td>
+          <td class="px-3 py-2 text-right">
+            <button onclick="confirmThuHoiFp('${f.ten}')" type="button"
+              class="px-2.5 py-1 text-xs font-medium text-[#EF4444] hover:bg-red-50 rounded transition flex items-center gap-1 ml-auto">
+              <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+              Thu hồi
+            </button>
+          </td>
+        </tr>
+      `).join('');
+      return `
+        <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+          <thead class="bg-[#F8FAFB] text-slate-600">
+            <tr>
+              <th class="text-left font-medium px-3 py-2">Tên Fanpage</th>
+              <th class="text-left font-medium px-3 py-2">BM</th>
+              <th class="text-left font-medium px-3 py-2">Followers</th>
+              <th class="text-left font-medium px-3 py-2">Trạng thái</th>
+              <th class="text-right font-medium px-3 py-2">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+      `;
+    }
+
+    // 11. Confirm dialog dùng chung cho thu hồi (hỗ trợ BR-06 checkbox)
+    let _confirmCallback = null;
+    function showConfirm(title, message, onConfirm, requireBR06 = false) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      _confirmCallback = onConfirm;
+
+      const wrap = document.getElementById('confirm-br06-wrap');
+      const cb = document.getElementById('confirm-br06');
+      const yesBtn = document.getElementById('confirm-yes-btn');
+      cb.checked = false;
+      if (requireBR06) {
+        wrap.classList.remove('hidden');
+        yesBtn.disabled = true;
+      } else {
+        wrap.classList.add('hidden');
+        yesBtn.disabled = false;
+      }
+
+      document.getElementById('confirm-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeConfirm() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      _confirmCallback = null;
+    }
+    // BR-06: bật nút Xác nhận khi user tick
+    document.getElementById('confirm-br06').addEventListener('change', (e) => {
+      const wrap = document.getElementById('confirm-br06-wrap');
+      const yesBtn = document.getElementById('confirm-yes-btn');
+      if (!wrap.classList.contains('hidden')) yesBtn.disabled = !e.target.checked;
+    });
+    document.getElementById('confirm-yes-btn').addEventListener('click', () => {
+      const cb = _confirmCallback;
+      closeConfirm();
+      if (cb) cb();
+    });
+
+    // Giữ lại 2 hàm này cho modal Chi tiết KH (tab TKQC / Fanpage)
+    function confirmThuHoiTkqc(tkqcTen) {
+      const khTen = currentKh ? currentKh.ten : 'khách hàng này';
+      const t = TKQC.find((x) => x.ten === tkqcTen);
+      const requireBR06 = !!(t && t.trangThai === 'active');
+      showConfirm(
+        'Thu hồi TKQC',
+        `Xác nhận thu hồi ${tkqcTen} khỏi ${khTen}?`,
+        () => {
+          if (t) t.maKH = null;
+          if (currentKh) currentKh.soTKQC = Math.max(0, (currentKh.soTKQC || 1) - 1);
+          switchDetailTab('tkqc');
+          renderTable();
+          showToast(`Đã thu hồi ${tkqcTen}`);
+        },
+        requireBR06
+      );
+    }
+    function confirmThuHoiFp(fpTen) {
+      const khTen = currentKh ? currentKh.ten : 'khách hàng này';
+      const f = FANPAGE.find((x) => x.ten === fpTen);
+      const requireBR06 = !!(f && f.trangThai === 'active');
+      showConfirm(
+        'Thu hồi Fanpage',
+        `Xác nhận thu hồi ${fpTen} khỏi ${khTen}?`,
+        () => {
+          if (f) f.maKH = null;
+          if (currentKh) currentKh.soFanpage = Math.max(0, (currentKh.soFanpage || 1) - 1);
+          switchDetailTab('fanpage');
+          renderTable();
+          showToast(`Đã thu hồi ${fpTen}`);
+        },
+        requireBR06
+      );
+    }
+
+    // 12. Đóng modal khi click overlay hoặc nhấn ESC
+    ['add-modal', 'detail-modal', 'confirm-modal'].forEach((id) => {
+      const overlay = document.getElementById(id).querySelector('.fixed');
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          if (id === 'add-modal') closeAddModal();
+          else if (id === 'detail-modal') closeDetailModal();
+          else closeConfirm();
+        }
+      });
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAddModal();
+        closeDetailModal();
+        closeConfirm();
+      }
+    });
+  </script>
+</body>
+</html>

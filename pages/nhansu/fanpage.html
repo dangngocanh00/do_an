@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý Fanpage — Nhân sự | TN Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
+    table tbody tr { transition: background-color 0.15s ease; }
+    .fp-card { transition: box-shadow 0.2s ease, transform 0.2s ease; }
+    .fp-card:hover { box-shadow: 0 8px 24px -8px rgba(33, 166, 145, 0.25); transform: translateY(-2px); }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-panel { animation: modalIn 180ms ease-out; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .toast-show { animation: toastIn 220ms ease-out; }
+  </style>
+</head>
+<body class="bg-[#F0F4F4]">
+  <!-- Sidebar -->
+  <div id="sidebar"></div>
+
+  <!-- Header dùng chung -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+    <div class="flex items-center gap-2">
+      <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="dashboard.html" id="bell-link" class="relative p-2 rounded-full hover:bg-slate-100 transition" title="Xem thông báo">
+        <i data-lucide="bell" class="w-5 h-5 text-slate-600" stroke-width="1.5"></i>
+        <span id="bell-badge" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#EF4444] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">0</span>
+      </a>
+      <div id="header-user" class="flex items-center gap-2 px-2"></div>
+      <button onclick="logout()" type="button"
+        class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+    <div class="max-w-screen-xl mx-auto px-6 py-6">
+
+      <!-- 1. Page header -->
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-[#060D10]">Quản lý Fanpage</h1>
+        <p class="text-sm text-[#64748B] mt-1">Fanpage trong phạm vi phụ trách</p>
+      </div>
+
+      <!-- 2. Banner cảnh báo (conditional) -->
+      <div id="banners" class="space-y-2 mb-4"></div>
+
+      <!-- 3. Stats mini -->
+      <div id="stats-mini" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"></div>
+
+      <!-- 4. Toolbar -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex flex-wrap items-center gap-3">
+        <div class="relative flex-1 min-w-[220px] max-w-md">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+          <input id="search-input" type="text"
+            placeholder="Tìm theo tên Fanpage..."
+            class="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition" />
+        </div>
+        <select id="filter-status"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả trạng thái</option>
+          <option value="active">Hoạt động</option>
+          <option value="restricted">Bị hạn chế</option>
+          <option value="disabled">Vô hiệu</option>
+        </select>
+        <select id="filter-customer"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả khách hàng</option>
+        </select>
+        <!-- Phải: count + view toggle + export -->
+        <div class="ml-auto flex items-center gap-3">
+          <span id="total-count" class="text-sm text-slate-600 font-medium">Tổng: 0</span>
+          <!-- View toggle -->
+          <div class="flex border border-slate-200 rounded-lg overflow-hidden" role="group" aria-label="Chế độ hiển thị">
+            <button onclick="setView('list')" data-view-btn="list" type="button" title="Bảng"
+              class="px-2.5 py-2 transition">
+              <i data-lucide="list" class="w-4 h-4"></i>
+            </button>
+            <button onclick="setView('card')" data-view-btn="card" type="button" title="Thẻ"
+              class="px-2.5 py-2 transition border-l border-slate-200">
+              <i data-lucide="layout-grid" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <!-- Export -->
+          <button onclick="exportReport()" type="button"
+            class="bg-white border border-[#21A691] text-[#21A691] hover:bg-[#21A691]/5 font-medium px-3 py-2 rounded-lg flex items-center gap-2 transition text-sm">
+            <i data-lucide="download" class="w-4 h-4" stroke-width="2"></i>
+            Xuất báo cáo
+          </button>
+        </div>
+      </div>
+
+      <!-- 5. List view -->
+      <section id="view-list" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-[#F8FAFB] text-slate-600">
+              <tr>
+                <th class="text-left font-medium px-4 py-3 w-12">STT</th>
+                <th class="text-left font-medium px-4 py-3">ID Fanpage</th>
+                <th class="text-left font-medium px-4 py-3">Tên Fanpage</th>
+                <th class="text-left font-medium px-4 py-3">Khách hàng</th>
+                <th class="text-left font-medium px-4 py-3">BM</th>
+                <th class="text-left font-medium px-4 py-3">Followers</th>
+                <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                <th class="text-left font-medium px-4 py-3">Đồng bộ lần cuối</th>
+                <th class="text-right font-medium px-4 py-3">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="fp-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 6. Card view -->
+      <section id="view-card" class="hidden">
+        <div id="fp-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </section>
+
+      <!-- Pagination dùng chung — số item/trang đổi theo view (list 10, card 6) -->
+      <div id="pagination" class="bg-white rounded-xl border border-slate-200 mt-3"></div>
+
+    </div>
+  </main>
+
+  <!-- ===== Modal: Chi tiết Fanpage (read-only) ===== -->
+  <div id="detail-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl modal-panel max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div class="flex items-center gap-3">
+            <h2 id="detail-title" class="text-lg font-semibold text-[#060D10]">—</h2>
+            <span id="detail-status-badge"></span>
+          </div>
+          <button onclick="closeDetailModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 space-y-5">
+          <!-- Banner cảnh báo (conditional) -->
+          <div id="detail-banner" class="hidden"></div>
+
+          <!-- 4 ô thông tin -->
+          <div id="detail-info" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+
+          <!-- VIA cầm quyền -->
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-2">VIA đang cầm quyền</h3>
+            <div id="detail-via-list"></div>
+          </div>
+
+          <!-- TKQC liên kết -->
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-2">TKQC đang liên kết</h3>
+            <div id="detail-tkqc-list"></div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end px-6 py-4 border-t border-slate-200">
+          <button onclick="closeDetailModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2">
+    <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5 text-[#21A691]"></i>
+    <span id="toast-message" class="text-sm font-medium text-[#060D10]">—</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../assets/js/auth.js"></script>
+  <script src="../../assets/js/data.js"></script>
+  <script src="../../components/sidebar.js"></script>
+  <script src="../../assets/js/pagination.js"></script>
+
+  <script>
+    // 0. Bảo vệ + sidebar
+    checkAuth('nhansu');
+    renderSidebar('nhansu');
+
+    // 1. Render header user
+    (function renderHeaderUser() {
+      const user = getCurrentUser();
+      if (!user) return;
+      document.getElementById('header-user').innerHTML = `
+        <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
+        <div class="w-9 h-9 rounded-full bg-[#21A691] text-white font-semibold flex items-center justify-center">
+          ${user.name.charAt(0).toUpperCase()}
+        </div>
+      `;
+    })();
+
+    // 2. Lọc data theo phạm vi KH mà nhân sự đang phụ trách
+    const user = getCurrentUser();
+    const myKHIds = KHACH_HANG
+      .filter((kh) => kh.nhanSuPhuTrach === user.email)
+      .map((kh) => kh.id);
+    const myKHs = KHACH_HANG.filter((kh) => myKHIds.includes(kh.id));
+    const myFanpages = FANPAGE.filter((fp) => myKHIds.includes(fp.maKH));
+
+    // Lookup
+    const khMap = Object.fromEntries(KHACH_HANG.map((k) => [k.id, k.ten]));
+    const bmMap = Object.fromEntries(BM.map((b) => [b.id, b.ten]));
+    const tkqcByTen = Object.fromEntries(TKQC.map((t) => [t.ten, t]));
+
+    // Bell badge — số cảnh báo chưa xử lý liên quan tới scope
+    (function updateBellBadge() {
+      const myFpTens = new Set(myFanpages.map((f) => f.ten));
+      const myTkqcTens = new Set(TKQC.filter((t) => myKHIds.includes(t.maKH)).map((t) => t.ten));
+      const unread = CANH_BAO.filter((cb) =>
+        cb.trangThai === 'chua_xu_ly' && (
+          myFpTens.has(cb.taiSan) ||
+          myTkqcTens.has(cb.taiSan) ||
+          cb.taiSan.startsWith('VIA_') ||
+          cb.taiSan.startsWith('Page_') ||
+          cb.taiSan.startsWith('BM_')
+        )
+      ).length;
+      const badge = document.getElementById('bell-badge');
+      badge.textContent = unread;
+      badge.classList.toggle('hidden', unread === 0);
+    })();
+
+    // Mock — VIA cầm quyền per Fanpage + TKQC liên kết
+    const FANPAGE_VIA_NAMES = {
+      FP001: ['VIA_nguyen', 'VIA_tran', 'VIA_pham', 'VIA_hoang', 'VIA_le'],
+      FP002: ['VIA_nguyen', 'VIA_tran', 'VIA_pham', 'VIA_hoang'],
+      FP003: ['VIA_nguyen', 'VIA_tran', 'VIA_pham'],
+      FP004: ['VIA_le', 'VIA_pham'],
+      FP005: ['VIA_hoang'],
+      FP006: ['VIA_nguyen', 'VIA_tran', 'VIA_pham', 'VIA_hoang'],
+      FP007: ['VIA_nguyen', 'VIA_tran', 'VIA_pham'],
+      FP008: ['VIA_le', 'VIA_pham'],
+      FP009: ['VIA_hoang']
+    };
+    const FANPAGE_TKQC = {
+      FP001: ['TKQC_001', 'TKQC_002'],
+      FP002: ['TKQC_001'],
+      FP003: ['TKQC_004'],
+      FP004: ['TKQC_003'],
+      FP005: ['TKQC_005', 'TKQC_006'],
+      FP006: ['TKQC_007'],
+      FP007: ['TKQC_007'],
+      FP008: ['TKQC_008'],
+      FP009: ['TKQC_008']
+    };
+    // Loại quyền VIA trong fanpage (mặc định theo VIA)
+    const VIA_FP_ROLE = {
+      VIA_nguyen: 'Admin',
+      VIA_tran:   'Admin',
+      VIA_pham:   'Editor',
+      VIA_hoang:  'Editor',
+      VIA_le:     'Admin'
+    };
+
+    // 3. Helpers
+    function refreshIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    }
+    function formatNumber(n) {
+      return Number(n).toLocaleString('vi-VN');
+    }
+    function daysUntil(dateStr) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return Math.ceil((new Date(dateStr) - today) / (1000 * 60 * 60 * 24));
+    }
+    // Lấy chữ cái đầu của tên fanpage (bỏ qua tiền tố "Page")
+    function fpInitial(ten) {
+      const parts = ten.split(' ');
+      if (parts[0].toLowerCase() === 'page' && parts[1]) return parts[1].charAt(0).toUpperCase();
+      return ten.charAt(0).toUpperCase();
+    }
+    // Status config — dùng cho cả badge và border-left card
+    const STATUS_CFG = {
+      active:     { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động',   border: '#21A691' },
+      restricted: { bg: '#FEF3C7', color: '#F59E0B', label: 'Bị hạn chế',  border: '#F59E0B' },
+      disabled:   { bg: '#FEE2E2', color: '#EF4444', label: 'Vô hiệu',     border: '#EF4444' }
+    };
+    function statusBadge(trangThai) {
+      const cfg = STATUS_CFG[trangThai] || { bg: '#F1F5F9', color: '#64748B', label: trangThai };
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
+    }
+    function loaiQuyenBadge(role) {
+      const color = role === 'Admin' ? '#21A691' : '#64748B';
+      return `<span class="inline-flex px-2 py-0.5 rounded text-xs font-medium text-white" style="background-color: ${color};">${role}</span>`;
+    }
+
+    // 4. Stats mini
+    (function renderStatsMini() {
+      const tong = myFanpages.length;
+      const active = myFanpages.filter((f) => f.trangThai === 'active').length;
+      const restricted = myFanpages.filter((f) => f.trangThai === 'restricted').length;
+
+      const cards = [
+        { num: tong,       label: 'Fanpage đang phụ trách', icon: 'flag',           color: '#21A691', numColor: '#21A691' },
+        { num: active,     label: 'Đang hoạt động',         icon: 'check-circle-2', color: '#21A691', numColor: '#21A691' },
+        { num: restricted, label: 'Bị hạn chế',             icon: 'alert-triangle', color: '#EF4444', numColor: '#EF4444' }
+      ];
+      document.getElementById('stats-mini').innerHTML = cards.map((c) => `
+        <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${c.color}1A; color: ${c.color};">
+            <i data-lucide="${c.icon}" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" style="color: ${c.numColor};">${c.num}</div>
+            <div class="text-xs text-slate-500">${c.label}</div>
+          </div>
+        </div>
+      `).join('');
+    })();
+
+    // 5. Banners cảnh báo (red restricted + yellow soVIA)
+    (function renderBanners() {
+      const container = document.getElementById('banners');
+      const banners = [];
+
+      const restrictedCount = myFanpages.filter((f) => f.trangThai === 'restricted').length;
+      if (restrictedCount > 0) {
+        banners.push(`
+          <div class="bg-red-50 border border-red-200 rounded-xl p-3 flex items-start gap-2">
+            <i data-lucide="alert-octagon" class="w-5 h-5 text-[#EF4444] flex-shrink-0 mt-0.5"></i>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-red-900">🚨 ${restrictedCount} Fanpage đang bị hạn chế</p>
+              <p class="text-xs text-red-700 mt-0.5">Kiểm tra ngay và liên hệ Leader để xử lý.</p>
+            </div>
+          </div>
+        `);
+      }
+
+      container.innerHTML = banners.join('');
+    })();
+
+    // 6. Populate dropdown KH (chỉ KH của nhân sự)
+    (function populateCustomerFilter() {
+      const sel = document.getElementById('filter-customer');
+      sel.innerHTML += myKHs.map((k) => `<option value="${k.id}">${k.ten}</option>`).join('');
+    })();
+
+    // 7. View toggle (list / card) — lưu localStorage
+    let currentView = localStorage.getItem('tnmanager_fp_view') === 'card' ? 'card' : 'list';
+    function setView(view) {
+      currentView = view;
+      localStorage.setItem('tnmanager_fp_view', view);
+      // Update button styles
+      document.querySelectorAll('[data-view-btn]').forEach((btn) => {
+        const isActive = btn.dataset.viewBtn === view;
+        btn.classList.toggle('bg-[#21A691]', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('text-slate-500', !isActive);
+        btn.classList.toggle('hover:bg-slate-100', !isActive);
+      });
+      // Show/hide containers
+      document.getElementById('view-list').classList.toggle('hidden', view !== 'list');
+      document.getElementById('view-card').classList.toggle('hidden', view !== 'card');
+      // Reset trang khi đổi view (list 10/page vs card 6/page → trang khác nhau)
+      if (typeof currentPage !== 'undefined') currentPage = 1;
+      renderCurrentView();
+    }
+
+    // 8. Render bảng / cards theo filter + phân trang (list 10/page, card 6/page)
+    const tbody = document.getElementById('fp-tbody');
+    const cardsContainer = document.getElementById('fp-cards');
+    const totalCountEl = document.getElementById('total-count');
+    const searchInput = document.getElementById('search-input');
+    const filterStatus = document.getElementById('filter-status');
+    const filterCustomer = document.getElementById('filter-customer');
+    let currentPage = 1;
+
+    function getFiltered() {
+      const search = searchInput.value.toLowerCase().trim();
+      const status = filterStatus.value;
+      const cust = filterCustomer.value;
+      return myFanpages.filter((f) => {
+        const matchSearch = !search || f.ten.toLowerCase().includes(search);
+        const matchStatus = status === 'all' || f.trangThai === status;
+        const matchCust = cust === 'all' || f.maKH === cust;
+        return matchSearch && matchStatus && matchCust;
+      });
+    }
+
+    function renderCurrentView() {
+      const filtered = getFiltered();
+      // ITEMS_PER_PAGE đổi theo view
+      const ipp = currentView === 'list' ? 10 : 6;
+      const pageInfo = paginate(filtered, currentPage, ipp);
+      currentPage = pageInfo.currentPage;
+
+      totalCountEl.textContent = `Tổng: ${pageInfo.total} Fanpage`;
+      if (currentView === 'list') {
+        renderList(pageInfo.items);
+      } else {
+        renderCard(pageInfo.items);
+      }
+
+      renderPagination('pagination', pageInfo, (newPage) => {
+        currentPage = newPage;
+        renderCurrentView();
+        const target = currentView === 'list' ? tbody.closest('section') : cardsContainer.closest('section');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      refreshIcons();
+    }
+
+    function renderList(filtered) {
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr><td colspan="9" class="text-center py-10 text-slate-400 text-sm">
+            <div class="flex flex-col items-center gap-2">
+              <i data-lucide="search-x" class="w-8 h-8 text-slate-300"></i>
+              Không tìm thấy Fanpage phù hợp
+            </div>
+          </td></tr>`;
+        return;
+      }
+      tbody.innerHTML = filtered.map((f, idx) => {
+        const tenKH = khMap[f.maKH] || '—';
+        const tenBM = bmMap[f.maBM] || '—';
+        return `
+          <tr class="hover:bg-[#F0F4F4]">
+            <td class="px-4 py-3 text-slate-500">${idx + 1}</td>
+            <td class="px-4 py-3 text-sm font-mono text-slate-500">${f.id}</td>
+            <td class="px-4 py-3 font-medium text-[#060D10]">${f.ten}</td>
+            <td class="px-4 py-3 text-slate-700">${tenKH}</td>
+            <td class="px-4 py-3 text-slate-700">${tenBM}</td>
+            <td class="px-4 py-3 text-slate-700">${formatNumber(f.followers)}</td>
+            <td class="px-4 py-3">${statusBadge(f.trangThai)}</td>
+            <td class="px-4 py-3 text-slate-500 text-xs">${f.dongBoLanCuoi}</td>
+            <td class="px-4 py-3">
+              <div class="flex items-center justify-end">
+                <button onclick="openDetailModal('${f.id}')" type="button" title="Chi tiết"
+                  class="p-1.5 rounded text-slate-500 hover:text-[#21A691] hover:bg-slate-100 transition">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderCard(filtered) {
+      if (filtered.length === 0) {
+        cardsContainer.innerHTML = `
+          <div class="col-span-full bg-white rounded-xl border border-slate-200 py-10 text-center text-slate-400 text-sm">
+            <i data-lucide="search-x" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+            Không tìm thấy Fanpage phù hợp
+          </div>`;
+        return;
+      }
+      cardsContainer.innerHTML = filtered.map((f) => {
+        const cfg = STATUS_CFG[f.trangThai] || STATUS_CFG.active;
+        const tenKH = khMap[f.maKH] || '—';
+        const viaWarn = f.soVIA < 4
+          ? '<i data-lucide="alert-triangle" class="inline w-3 h-3 text-[#EF4444] ml-0.5 align-text-bottom"></i>'
+          : '';
+        const viaColor = f.soVIA < 4 ? '#EF4444' : '#64748B';
+        return `
+          <div class="fp-card bg-white rounded-xl shadow-sm border border-slate-200 p-5" style="border-left: 4px solid ${cfg.border};">
+            <!-- Header -->
+            <div class="flex items-start justify-between gap-2 mb-3">
+              <h3 class="font-semibold text-[#060D10] text-sm flex-1 min-w-0 truncate" title="${f.ten}">${f.ten}</h3>
+              ${statusBadge(f.trangThai)}
+            </div>
+            <!-- Body: avatar + followers -->
+            <div class="flex items-center gap-3 mb-4 pb-4 border-b border-slate-100">
+              <div class="w-12 h-12 rounded-full bg-[#21A691] text-white flex items-center justify-center text-xl font-bold flex-shrink-0">
+                ${fpInitial(f.ten)}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-2xl font-bold text-[#060D10]">${formatNumber(f.followers)}</div>
+                <div class="text-xs text-slate-500">followers</div>
+              </div>
+            </div>
+            <!-- Meta -->
+            <div class="flex items-center justify-between text-xs mb-3 gap-2">
+              <span class="text-slate-600 truncate min-w-0 flex-1" title="${tenKH}">
+                <i data-lucide="briefcase" class="inline w-3 h-3 mr-1 align-text-bottom"></i>${tenKH}
+              </span>
+              <span class="flex-shrink-0 font-medium" style="color: ${viaColor};">
+                <i data-lucide="user-circle" class="inline w-3 h-3 mr-0.5 align-text-bottom"></i>
+                ${f.soVIA} VIA ${viaWarn}
+              </span>
+            </div>
+            <!-- Footer button -->
+            <button onclick="openDetailModal('${f.id}')" type="button"
+              class="w-full py-1.5 text-sm font-medium text-[#21A691] hover:bg-[#21A691]/10 rounded-lg transition flex items-center justify-center gap-1.5 border border-[#21A691]/30">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+              Chi tiết
+            </button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Reset page khi filter đổi
+    searchInput.addEventListener('input', () => { currentPage = 1; renderCurrentView(); });
+    filterStatus.addEventListener('change', () => { currentPage = 1; renderCurrentView(); });
+    filterCustomer.addEventListener('change', () => { currentPage = 1; renderCurrentView(); });
+    // Init view styles + render lần đầu (gọi sau khi const đã khai báo để tránh TDZ)
+    setView(currentView);
+
+    // 9. Modal Chi tiết Fanpage (read-only)
+    function openDetailModal(fpId) {
+      const f = myFanpages.find((x) => x.id === fpId);
+      if (!f) return;
+
+      document.getElementById('detail-title').textContent = f.ten;
+      document.getElementById('detail-status-badge').innerHTML = statusBadge(f.trangThai);
+
+      // Banner cảnh báo (chỉ khi restricted)
+      const banner = document.getElementById('detail-banner');
+      if (f.trangThai === 'restricted') {
+        banner.className = 'bg-red-50 border border-red-200 rounded-lg p-3 flex gap-2';
+        banner.innerHTML = `
+          <i data-lucide="alert-octagon" class="w-5 h-5 text-[#EF4444] flex-shrink-0 mt-0.5"></i>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold text-red-900">Fanpage này đang bị Facebook hạn chế</div>
+            <p class="text-xs text-red-800 mt-0.5">Liên hệ Leader để xử lý ngay.</p>
+          </div>
+        `;
+      } else if (f.soVIA < 4) {
+        banner.className = 'bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2';
+        banner.innerHTML = `
+          <i data-lucide="alert-circle" class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"></i>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold text-amber-900">Thiếu VIA backup</div>
+            <p class="text-xs text-amber-800 mt-0.5">Fanpage này hiện chỉ có ${f.soVIA} VIA cầm quyền.</p>
+          </div>
+        `;
+      } else {
+        banner.className = 'hidden';
+        banner.innerHTML = '';
+      }
+
+      // 4 ô info
+      const info = [
+        { label: 'Khách hàng',       value: khMap[f.maKH] || '—' },
+        { label: 'BM chứa',          value: bmMap[f.maBM] || '—' },
+        { label: 'Followers',        value: formatNumber(f.followers) },
+        { label: 'Đồng bộ lần cuối', value: f.dongBoLanCuoi }
+      ];
+      document.getElementById('detail-info').innerHTML = info.map((it) => `
+        <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">
+          <div class="text-xs text-slate-500 mb-1">${it.label}</div>
+          <div class="text-sm font-semibold text-[#060D10]">${it.value}</div>
+        </div>
+      `).join('');
+
+      // VIA + TKQC
+      document.getElementById('detail-via-list').innerHTML = renderDetailVIAs(f.id);
+      document.getElementById('detail-tkqc-list').innerHTML = renderDetailTKQCs(f.id);
+
+      document.getElementById('detail-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+    }
+
+    // Bảng VIA — highlight VIA disabled (đỏ) + token < 7 ngày (vàng)
+    function renderDetailVIAs(fpId) {
+      const names = FANPAGE_VIA_NAMES[fpId] || [];
+      if (names.length === 0) {
+        return '<p class="text-sm text-slate-400 text-center py-4">Chưa có VIA nào</p>';
+      }
+      const rows = names.map((name) => {
+        const v = VIA.find((x) => x.ten === name);
+        if (!v) return `<tr><td colspan="3" class="px-3 py-2 text-xs text-slate-400">${name} (không tìm thấy)</td></tr>`;
+        const days = daysUntil(v.tokenHetHan);
+        const isDisabled = v.trangThai === 'disabled';
+        let rowBg = '';
+        if (isDisabled) rowBg = 'bg-red-50';
+        else if (days < 7) rowBg = 'bg-[#FEF9C3]';
+        let tokenColor = 'text-slate-600';
+        let suffix = '';
+        if (days < 0) { tokenColor = 'text-[#EF4444] font-semibold'; suffix = ' (đã hết hạn)'; }
+        else if (days < 7) { tokenColor = 'text-[#EF4444] font-semibold'; suffix = ` (còn ${days} ngày)`; }
+        else if (days < 30) { tokenColor = 'text-[#F59E0B] font-semibold'; suffix = ` (còn ${days} ngày)`; }
+        const role = VIA_FP_ROLE[v.ten] || 'Editor';
+        return `
+          <tr class="${rowBg}">
+            <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${v.ten}</td>
+            <td class="px-3 py-2">${loaiQuyenBadge(role)}</td>
+            <td class="px-3 py-2 text-xs ${tokenColor}">${v.tokenHetHan}${suffix}</td>
+          </tr>
+        `;
+      }).join('');
+      return `
+        <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+          <thead class="bg-[#F8FAFB] text-slate-600">
+            <tr>
+              <th class="text-left font-medium px-3 py-2">Tên VIA</th>
+              <th class="text-left font-medium px-3 py-2">Loại quyền</th>
+              <th class="text-left font-medium px-3 py-2">Token hết hạn</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function renderDetailTKQCs(fpId) {
+      const names = FANPAGE_TKQC[fpId] || [];
+      if (names.length === 0) {
+        return '<p class="text-sm text-slate-400 text-center py-4">Chưa có TKQC nào liên kết</p>';
+      }
+      const rows = names.map((name) => {
+        const t = tkqcByTen[name];
+        if (!t) return `
+          <tr>
+            <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${name}</td>
+            <td class="px-3 py-2 text-xs text-slate-400">—</td>
+            <td class="px-3 py-2 text-xs text-slate-400">—</td>
+          </tr>`;
+        const trangThai = t.trangThai === 'active'
+          ? '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>'
+          : '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu</span>';
+        return `
+          <tr>
+            <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${t.ten}</td>
+            <td class="px-3 py-2 text-slate-600 text-sm">${khMap[t.maKH] || '—'}</td>
+            <td class="px-3 py-2">${trangThai}</td>
+          </tr>
+        `;
+      }).join('');
+      return `
+        <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+          <thead class="bg-[#F8FAFB] text-slate-600">
+            <tr>
+              <th class="text-left font-medium px-3 py-2">Tên TKQC</th>
+              <th class="text-left font-medium px-3 py-2">Khách hàng</th>
+              <th class="text-left font-medium px-3 py-2">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+      `;
+    }
+
+    // 10. Toast
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toast-icon');
+      document.getElementById('toast-message').textContent = message;
+      const cfg = {
+        success: { icon: 'check-circle-2', color: '#21A691' },
+        warning: { icon: 'alert-triangle', color: '#F59E0B' },
+        error:   { icon: 'x-circle',       color: '#EF4444' }
+      }[type] || { icon: 'check-circle-2', color: '#21A691' };
+      icon.setAttribute('data-lucide', cfg.icon);
+      icon.style.color = cfg.color;
+      toast.classList.remove('hidden');
+      toast.classList.remove('toast-show');
+      void toast.offsetWidth;
+      toast.classList.add('toast-show');
+      refreshIcons();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // 11. Mock xuất báo cáo
+    function exportReport() {
+      showToast(`Đang xuất báo cáo Fanpage (${myFanpages.length} bản ghi)...`, 'warning');
+    }
+
+    // 12. Đóng modal khi click overlay hoặc nhấn ESC
+    const overlay = document.getElementById('detail-modal').querySelector('.fixed');
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDetailModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetailModal(); });
+  </script>
+</body>
+</html>

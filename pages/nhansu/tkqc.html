@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý TKQC — Nhân sự | TN Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
+    table tbody tr { transition: background-color 0.15s ease; }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-panel { animation: modalIn 180ms ease-out; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .toast-show { animation: toastIn 220ms ease-out; }
+  </style>
+</head>
+<body class="bg-[#F0F4F4]">
+  <!-- Sidebar -->
+  <div id="sidebar"></div>
+
+  <!-- Header dùng chung -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+    <div class="flex items-center gap-2">
+      <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="dashboard.html" id="bell-link" class="relative p-2 rounded-full hover:bg-slate-100 transition" title="Xem thông báo">
+        <i data-lucide="bell" class="w-5 h-5 text-slate-600" stroke-width="1.5"></i>
+        <span id="bell-badge" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#EF4444] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">0</span>
+      </a>
+      <div id="header-user" class="flex items-center gap-2 px-2"></div>
+      <button onclick="logout()" type="button"
+        class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+    <div class="max-w-screen-xl mx-auto px-6 py-6">
+
+      <!-- 1. Page header -->
+      <div class="flex items-start justify-between mb-6 gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-[#060D10]">Quản lý TKQC</h1>
+          <p class="text-sm text-[#64748B] mt-1">Tài khoản quảng cáo trong phạm vi phụ trách</p>
+        </div>
+        <button onclick="exportReport()" type="button"
+          class="bg-white border border-[#21A691] text-[#21A691] hover:bg-[#21A691]/5 font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition flex-shrink-0">
+          <i data-lucide="download" class="w-4 h-4" stroke-width="2"></i>
+          Xuất báo cáo
+        </button>
+      </div>
+
+      <!-- 3. Stats mini -->
+      <div id="stats-mini" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"></div>
+
+      <!-- 4. Toolbar -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex flex-wrap items-center gap-3">
+        <div class="relative flex-1 min-w-[240px] max-w-md">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+          <input id="search-input" type="text"
+            placeholder="Tìm theo tên TKQC..."
+            class="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition" />
+        </div>
+        <select id="filter-status"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả trạng thái</option>
+          <option value="active">Hoạt động</option>
+          <option value="disabled">Vô hiệu</option>
+        </select>
+        <select id="filter-customer"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả khách hàng</option>
+        </select>
+        <div id="total-count" class="ml-auto text-sm text-slate-600 font-medium">Tổng: 0 TKQC</div>
+      </div>
+
+      <!-- 5. Bảng TKQC — đồng bộ cột với leader/tkqc.html, không có cột Thao tác -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-[#F8FAFB] text-slate-600">
+              <tr>
+                <th class="text-left font-medium px-4 py-3 w-12">STT</th>
+                <th class="text-left font-medium px-4 py-3">ID TKQC</th>
+                <th class="text-left font-medium px-4 py-3">Tên TKQC</th>
+                <th class="text-left font-medium px-4 py-3">Khách hàng</th>
+                <th class="text-left font-medium px-4 py-3">BM chứa</th>
+                <th class="text-left font-medium px-4 py-3">Hạn mức</th>
+                <th class="text-left font-medium px-4 py-3">Đã chi tiêu</th>
+                <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="tkqc-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <div id="pagination"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ===== Modal: Chi tiết TKQC (read-only) ===== -->
+  <div id="detail-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl modal-panel max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div class="flex items-center gap-3">
+            <h2 id="detail-title" class="text-lg font-semibold text-[#060D10]">—</h2>
+            <span id="detail-status-badge"></span>
+          </div>
+          <button onclick="closeDetailModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 space-y-5">
+          <!-- Banner cảnh báo (conditional) -->
+          <div id="detail-banner" class="hidden"></div>
+
+          <!-- 3 ô thông tin -->
+          <div id="detail-info" class="grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
+
+          <!-- Progress bar -->
+          <div>
+            <div class="flex items-center justify-between text-sm mb-1.5">
+              <span class="text-slate-600 font-medium">Tỉ lệ chi tiêu / hạn mức</span>
+              <span id="detail-progress-text" class="font-semibold text-[#060D10]">—</span>
+            </div>
+            <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div id="detail-progress-bar" class="h-full transition-all duration-500" style="width: 0%; background-color: #21A691;"></div>
+            </div>
+          </div>
+
+          <!-- Bảng VIA cầm quyền -->
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-2">VIA đang cầm quyền</h3>
+            <div id="detail-via-list"></div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+          <button onclick="closeDetailModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2">
+    <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5 text-[#21A691]"></i>
+    <span id="toast-message" class="text-sm font-medium text-[#060D10]">—</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../assets/js/auth.js"></script>
+  <script src="../../assets/js/data.js"></script>
+  <script src="../../components/sidebar.js"></script>
+  <script src="../../assets/js/pagination.js"></script>
+
+  <script>
+    // 0. Bảo vệ + sidebar
+    checkAuth('nhansu');
+    renderSidebar('nhansu');
+
+    // 1. Render header user
+    (function renderHeaderUser() {
+      const user = getCurrentUser();
+      if (!user) return;
+      document.getElementById('header-user').innerHTML = `
+        <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
+        <div class="w-9 h-9 rounded-full bg-[#21A691] text-white font-semibold flex items-center justify-center">
+          ${user.name.charAt(0).toUpperCase()}
+        </div>
+      `;
+    })();
+
+    // 2. Lọc data theo phạm vi KH mà nhân sự đang phụ trách
+    const user = getCurrentUser();
+    const myKHIds = KHACH_HANG
+      .filter((kh) => kh.nhanSuPhuTrach === user.email)
+      .map((kh) => kh.id);
+    const myKHs = KHACH_HANG.filter((kh) => myKHIds.includes(kh.id));
+    const myTKQCs = TKQC.filter((t) => myKHIds.includes(t.maKH));
+
+    // Lookup
+    const khMap = Object.fromEntries(KHACH_HANG.map((k) => [k.id, k.ten]));
+    const bmMap = Object.fromEntries(BM.map((b) => [b.id, b.ten]));
+    // BM chứa cho 1 TKQC (many-to-many qua BM_TKQC)
+    function bmListOfTkqc(tkqcId) {
+      const ids = BM_TKQC.filter((r) => r.maTKQC === tkqcId).map((r) => bmMap[r.maBM] || r.maBM);
+      return ids.length === 0 ? '—' : ids.join(', ');
+    }
+    // TKQC nào đang có cảnh báo trong CANH_BAO
+    const tkqcsWithAlerts = new Set(
+      CANH_BAO
+        .filter((cb) => cb.taiSan && cb.taiSan.startsWith('TKQC_'))
+        .map((cb) => cb.taiSan)
+    );
+    // Map cảnh báo theo tên TKQC (cb đầu tiên match)
+    const alertByTkqcTen = {};
+    CANH_BAO.forEach((cb) => {
+      if (cb.taiSan && cb.taiSan.startsWith('TKQC_') && !alertByTkqcTen[cb.taiSan]) {
+        alertByTkqcTen[cb.taiSan] = cb;
+      }
+    });
+
+    // Bell badge: số cảnh báo chua_xu_ly liên quan TKQC tôi phụ trách
+    (function updateBellBadge() {
+      const myTkqcTens = new Set(myTKQCs.map((t) => t.ten));
+      const unread = CANH_BAO.filter((cb) =>
+        cb.trangThai === 'chua_xu_ly' && (myTkqcTens.has(cb.taiSan) || cb.taiSan.startsWith('VIA_') || cb.taiSan.startsWith('BM_') || cb.taiSan.startsWith('Page_'))
+      ).length;
+      const badge = document.getElementById('bell-badge');
+      badge.textContent = unread;
+      badge.classList.toggle('hidden', unread === 0);
+    })();
+
+    // 3. Helpers
+    function refreshIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    }
+    function formatVND(n) {
+      return Number(n).toLocaleString('vi-VN') + 'đ';
+    }
+    function daysUntil(dateStr) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return Math.ceil((new Date(dateStr) - today) / (1000 * 60 * 60 * 24));
+    }
+    function progressColor(pct) {
+      if (pct >= 90) return '#EF4444';
+      if (pct >= 70) return '#F59E0B';
+      return '#21A691';
+    }
+    function statusBadge(trangThai) {
+      if (trangThai === 'active') {
+        return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>`;
+      }
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu</span>`;
+    }
+
+    // 4. Stats mini
+    (function renderStatsMini() {
+      const tong = myTKQCs.length;
+      const active = myTKQCs.filter((t) => t.trangThai === 'active').length;
+      const coCanhBao = myTKQCs.filter((t) => tkqcsWithAlerts.has(t.ten)).length;
+
+      const cards = [
+        { num: tong,      label: 'TKQC đang phụ trách', icon: 'credit-card', color: '#21A691', numColor: '#21A691' },
+        { num: active,    label: 'Đang hoạt động',      icon: 'check-circle-2', color: '#21A691', numColor: '#21A691' },
+        { num: coCanhBao, label: 'Có cảnh báo',         icon: 'alert-triangle', color: '#EF4444', numColor: '#EF4444' }
+      ];
+      document.getElementById('stats-mini').innerHTML = cards.map((c) => `
+        <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${c.color}1A; color: ${c.color};">
+            <i data-lucide="${c.icon}" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" style="color: ${c.numColor};">${c.num}</div>
+            <div class="text-xs text-slate-500">${c.label}</div>
+          </div>
+        </div>
+      `).join('');
+    })();
+
+    // 6. Populate dropdown KH (chỉ KH của nhân sự này)
+    (function populateCustomerFilter() {
+      const sel = document.getElementById('filter-customer');
+      sel.innerHTML += myKHs.map((k) => `<option value="${k.id}">${k.ten}</option>`).join('');
+    })();
+
+    // 7. Render bảng TKQC theo filter + phân trang 10/page
+    const tbody = document.getElementById('tkqc-tbody');
+    const totalCountEl = document.getElementById('total-count');
+    const searchInput = document.getElementById('search-input');
+    const filterStatus = document.getElementById('filter-status');
+    const filterCustomer = document.getElementById('filter-customer');
+    const ITEMS_PER_PAGE = 10;
+    let currentPage = 1;
+
+    function renderTable() {
+      const search = searchInput.value.toLowerCase().trim();
+      const status = filterStatus.value;
+      const cust = filterCustomer.value;
+
+      const filtered = myTKQCs.filter((t) => {
+        const matchSearch = !search || t.ten.toLowerCase().includes(search);
+        const matchStatus = status === 'all' || t.trangThai === status;
+        const matchCust = cust === 'all' || t.maKH === cust;
+        return matchSearch && matchStatus && matchCust;
+      });
+
+      const pageInfo = paginate(filtered, currentPage, ITEMS_PER_PAGE);
+      currentPage = pageInfo.currentPage;
+
+      if (pageInfo.total === 0) {
+        tbody.innerHTML = `
+          <tr><td colspan="8" class="text-center py-10 text-slate-400 text-sm">
+            <div class="flex flex-col items-center gap-2">
+              <i data-lucide="search-x" class="w-8 h-8 text-slate-300"></i>
+              Không tìm thấy TKQC phù hợp
+            </div>
+          </td></tr>`;
+      } else {
+        tbody.innerHTML = pageInfo.items.map((t, idx) => {
+          const tenKH = khMap[t.maKH] || '—';
+          const pct = t.hanMuc > 0 ? (t.chiTieu / t.hanMuc) * 100 : 0;
+          const barColor = progressColor(pct);
+          const stt = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+          // Highlight row TKQC vô hiệu
+          const rowClass = t.trangThai === 'disabled' ? 'bg-red-50' : '';
+          return `
+            <tr onclick="openDetailModal('${t.id}')" class="${rowClass} hover:bg-[#F0F4F4] cursor-pointer">
+              <td class="px-4 py-3 text-slate-500">${stt}</td>
+              <td class="px-4 py-3 text-sm font-mono text-slate-500">${t.id}</td>
+              <td class="px-4 py-3 font-medium text-[#060D10]">${t.ten}</td>
+              <td class="px-4 py-3 text-slate-700">${tenKH}</td>
+              <td class="px-4 py-3 text-slate-700">${bmListOfTkqc(t.id)}</td>
+              <td class="px-4 py-3 text-slate-700">${formatVND(t.hanMuc)}</td>
+              <td class="px-4 py-3">
+                <div class="text-sm text-slate-700">${formatVND(t.chiTieu)}</div>
+                <div class="mt-1 w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div class="h-full" style="width: ${pct}%; background-color: ${barColor};"></div>
+                </div>
+                <div class="text-[11px] text-slate-400 mt-0.5">${pct.toFixed(0)}% / hạn mức</div>
+              </td>
+              <td class="px-4 py-3">${statusBadge(t.trangThai)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+      totalCountEl.textContent = `Tổng: ${pageInfo.total} TKQC`;
+      refreshIcons();
+
+      renderPagination('pagination', pageInfo, (newPage) => {
+        currentPage = newPage;
+        renderTable();
+        const tableSection = tbody.closest('section');
+        if (tableSection) tableSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+
+    searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
+    filterStatus.addEventListener('change', () => { currentPage = 1; renderTable(); });
+    filterCustomer.addEventListener('change', () => { currentPage = 1; renderTable(); });
+    renderTable();
+
+    // 8. Mock — VIA cầm quyền per TKQC (cho modal chi tiết)
+    const TKQC_VIA_NAMES = {
+      TKQC001: ['VIA_nguyen', 'VIA_tran', 'VIA_pham', 'VIA_hoang', 'VIA_le'],
+      TKQC002: ['VIA_nguyen', 'VIA_tran', 'VIA_pham', 'VIA_hoang'],
+      TKQC003: ['VIA_le', 'VIA_pham'],
+      TKQC004: ['VIA_nguyen', 'VIA_tran', 'VIA_pham'],
+      TKQC005: ['VIA_hoang'],
+      TKQC006: ['VIA_nguyen', 'VIA_tran', 'VIA_pham', 'VIA_hoang', 'VIA_le', 'VIA_nguyen'],
+      TKQC007: ['VIA_nguyen', 'VIA_tran', 'VIA_pham', 'VIA_hoang'],
+      TKQC008: ['VIA_le', 'VIA_pham']
+    };
+
+    // 9. Modal Chi tiết TKQC (read-only)
+    function openDetailModal(tkqcId) {
+      const t = myTKQCs.find((x) => x.id === tkqcId);
+      if (!t) return;
+
+      document.getElementById('detail-title').textContent = t.ten;
+      document.getElementById('detail-status-badge').innerHTML = statusBadge(t.trangThai);
+
+      // Banner cảnh báo
+      renderDetailBanner(t);
+
+      // 3 ô info
+      const info = [
+        { label: 'Khách hàng',  value: khMap[t.maKH] || '—' },
+        { label: 'Hạn mức',     value: formatVND(t.hanMuc) },
+        { label: 'Đã chi tiêu', value: formatVND(t.chiTieu) }
+      ];
+      document.getElementById('detail-info').innerHTML = info.map((it) => `
+        <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">
+          <div class="text-xs text-slate-500 mb-1">${it.label}</div>
+          <div class="text-sm font-semibold text-[#060D10]">${it.value}</div>
+        </div>
+      `).join('');
+
+      // Progress bar
+      const pct = t.hanMuc > 0 ? (t.chiTieu / t.hanMuc) * 100 : 0;
+      const bar = document.getElementById('detail-progress-bar');
+      bar.style.width = pct + '%';
+      bar.style.backgroundColor = progressColor(pct);
+      document.getElementById('detail-progress-text').textContent =
+        `${formatVND(t.chiTieu)} / ${formatVND(t.hanMuc)} (${pct.toFixed(1)}%)`;
+
+      // Bảng VIA
+      document.getElementById('detail-via-list').innerHTML = renderDetailVIAs(t.id);
+
+      document.getElementById('detail-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+    }
+
+    // Banner cảnh báo trong modal — đỏ nếu mức cao trong CANH_BAO, vàng nếu thiếu VIA
+    function renderDetailBanner(tkqc) {
+      const banner = document.getElementById('detail-banner');
+      const cb = alertByTkqcTen[tkqc.ten];
+      if (cb) {
+        // Cảnh báo từ CANH_BAO — màu theo mức độ
+        const isHigh = cb.mucDo === 'cao';
+        const cls = isHigh
+          ? { bg: 'bg-red-50', border: 'border-red-200', icon: '#EF4444', text: 'text-red-900', sub: 'text-red-800' }
+          : { bg: 'bg-amber-50', border: 'border-amber-200', icon: '#F59E0B', text: 'text-amber-900', sub: 'text-amber-800' };
+        banner.className = `${cls.bg} ${cls.border} border rounded-lg p-3 flex gap-2`;
+        banner.innerHTML = `
+          <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0 mt-0.5" style="color: ${cls.icon};"></i>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold ${cls.text}">${cb.loai}</div>
+            <p class="text-xs ${cls.sub} mt-0.5">Cảnh báo phát sinh ${cb.thoiGian} — đề nghị Leader xử lý.</p>
+          </div>
+        `;
+      } else if (tkqc.soVIA < 4) {
+        banner.className = 'bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2';
+        banner.innerHTML = `
+          <i data-lucide="alert-circle" class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5"></i>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold text-amber-900">Thiếu VIA backup</div>
+            <p class="text-xs text-amber-800 mt-0.5">TKQC này hiện chỉ có ${tkqc.soVIA} VIA cầm quyền. Liên hệ Leader để bổ sung.</p>
+          </div>
+        `;
+      } else {
+        banner.className = 'hidden';
+        banner.innerHTML = '';
+      }
+    }
+
+    // Bảng VIA — highlight VIA disabled (đỏ) + token < 7 ngày (vàng)
+    function renderDetailVIAs(tkqcId) {
+      const names = TKQC_VIA_NAMES[tkqcId] || [];
+      if (names.length === 0) {
+        return '<p class="text-sm text-slate-400 text-center py-4">Chưa có VIA nào</p>';
+      }
+      const rows = names.map((name) => {
+        const v = VIA.find((x) => x.ten === name);
+        if (!v) return `<tr><td colspan="3" class="px-3 py-2 text-xs text-slate-400">${name} (không tìm thấy)</td></tr>`;
+        const days = daysUntil(v.tokenHetHan);
+        const isDisabled = v.trangThai === 'disabled';
+        // Row bg: đỏ nhạt nếu VIA disabled, vàng nếu token < 7 ngày
+        let rowBg = '';
+        if (isDisabled) rowBg = 'bg-red-50';
+        else if (days < 7) rowBg = 'bg-[#FEF9C3]';
+        // Token text color
+        let tokenColor = 'text-slate-600';
+        let suffix = '';
+        if (days < 0) { tokenColor = 'text-[#EF4444] font-semibold'; suffix = ' (đã hết hạn)'; }
+        else if (days < 7) { tokenColor = 'text-[#EF4444] font-semibold'; suffix = ` (còn ${days} ngày)`; }
+        else if (days < 30) { tokenColor = 'text-[#F59E0B] font-semibold'; suffix = ` (còn ${days} ngày)`; }
+        // Trạng thái VIA
+        const viaTrangThai = isDisabled
+          ? '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu</span>'
+          : '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>';
+        return `
+          <tr class="${rowBg}">
+            <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${v.ten}</td>
+            <td class="px-3 py-2 text-xs ${tokenColor}">${v.tokenHetHan}${suffix}</td>
+            <td class="px-3 py-2">${viaTrangThai}</td>
+          </tr>
+        `;
+      }).join('');
+      return `
+        <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+          <thead class="bg-[#F8FAFB] text-slate-600">
+            <tr>
+              <th class="text-left font-medium px-3 py-2">Tên VIA</th>
+              <th class="text-left font-medium px-3 py-2">Token hết hạn</th>
+              <th class="text-left font-medium px-3 py-2">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+      `;
+    }
+
+    // 10. Toast
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toast-icon');
+      document.getElementById('toast-message').textContent = message;
+      const cfg = {
+        success: { icon: 'check-circle-2', color: '#21A691' },
+        warning: { icon: 'alert-triangle', color: '#F59E0B' },
+        error:   { icon: 'x-circle',       color: '#EF4444' }
+      }[type] || { icon: 'check-circle-2', color: '#21A691' };
+      icon.setAttribute('data-lucide', cfg.icon);
+      icon.style.color = cfg.color;
+      toast.classList.remove('hidden');
+      toast.classList.remove('toast-show');
+      void toast.offsetWidth;
+      toast.classList.add('toast-show');
+      refreshIcons();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // 11. Mock xuất báo cáo
+    function exportReport() {
+      showToast(`Đang xuất báo cáo TKQC (${myTKQCs.length} bản ghi)...`, 'warning');
+    }
+
+    // 12. Đóng modal khi click overlay hoặc nhấn ESC
+    const overlay = document.getElementById('detail-modal').querySelector('.fixed');
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDetailModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetailModal(); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"try { require\\('fs'\\).readFileSync\\('c:/Users/dell/Desktop/Đồ án/DoAn/pages/leader/dashboard.html','utf8'\\); console.log\\('leader OK'\\); } catch\\(e\\) { console.error\\(e.message\\); }\")"
+    ]
+  }
+}

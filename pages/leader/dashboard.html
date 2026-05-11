@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Leader | TN Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
+    /* Hover row hiệu ứng nhẹ trên các bảng — nền xám xanh nhạt */
+    table tbody tr { transition: background-color 0.15s ease; }
+    table tbody tr:hover { background-color: #F0F4F4; }
+    /* Scrollbar mỏng, màu teal — dùng cho các vùng nội dung scroll trong dashboard */
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #F0F4F4; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #21A691; border-radius: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #1A8A78; }
+    /* Custom scrollbar mỏng cho notif-list */
+    #notif-list::-webkit-scrollbar { width: 4px; }
+    #notif-list::-webkit-scrollbar-track { background: transparent; }
+    #notif-list::-webkit-scrollbar-thumb { background: #21A691; border-radius: 4px; }
+    #notif-list::-webkit-scrollbar-thumb:hover { background: #1A8A78; }
+  </style>
+</head>
+<body class="bg-[#F0F4F4]">
+  <!-- Sidebar được render bởi components/sidebar.js -->
+  <div id="sidebar"></div>
+
+  <!-- Header cố định trên cùng, nằm bên phải sidebar -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+    <!-- Logo TN Manager bên trái header -->
+    <div class="flex items-center gap-2">
+      <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
+    </div>
+
+    <!-- Nhóm tiện ích bên phải header -->
+    <div class="flex items-center gap-2">
+      <!-- Chuông thông báo có badge đỏ — click → toggle notif panel -->
+      <button onclick="toggleNotifPanel()" id="bell-btn" type="button" class="relative p-2 rounded-full hover:bg-slate-100 transition" aria-label="Thông báo">
+        <i data-lucide="bell" class="w-5 h-5 text-slate-600" stroke-width="1.5"></i>
+        <span id="bell-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#EF4444] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">0</span>
+      </button>
+
+      <!-- Tên + avatar người dùng -->
+      <div id="header-user" class="flex items-center gap-2 px-2"></div>
+
+      <!-- Nút đăng xuất -->
+      <button onclick="logout()" type="button"
+        class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- Nội dung chính: lùi vào 240px để tránh sidebar, lùi xuống 64px để tránh header -->
+  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+    <!-- Giới hạn content width để không bị stretch trên màn hình lớn (1440/1920/2560px) -->
+    <div class="max-w-screen-xl mx-auto px-6 py-6">
+
+      <!-- 1. Tiêu đề trang -->
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-[#060D10]">Dashboard</h1>
+        <p class="text-sm text-[#64748B] mt-1">Tổng quan hệ thống tài nguyên số</p>
+      </div>
+
+      <!-- 2. 4 thẻ thống kê — mỗi card max-w 280px để không quá rộng trên monitor lớn -->
+      <div id="stats-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6"></div>
+
+      <!-- 3. Bảng cảnh báo rủi ro — section cố định 320px, header fix, tbody scroll 260px -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden max-h-[320px] flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+          <h2 class="text-base font-semibold text-[#060D10]">Cảnh báo rủi ro gần đây</h2>
+          <button onclick="openAlertsPanel()" type="button" class="text-sm text-[#21A691] font-medium hover:underline">Xem tất cả →</button>
+        </div>
+        <div class="overflow-auto custom-scroll max-h-[260px]">
+          <table class="w-full text-sm">
+            <thead class="bg-[#F8FAFB] text-slate-600 sticky top-0 z-10">
+              <tr>
+                <th class="text-left font-medium px-6 py-3">Tài sản</th>
+                <th class="text-left font-medium px-6 py-3">Loại rủi ro</th>
+                <th class="text-left font-medium px-6 py-3">Mức độ</th>
+                <th class="text-left font-medium px-6 py-3">Thời gian</th>
+                <th class="text-left font-medium px-6 py-3">Trạng thái</th>
+                <th class="text-right font-medium px-6 py-3">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="alerts-tbody" class="divide-y divide-slate-100 custom-scroll"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. Hai bảng nhỏ dưới cùng — luôn 2 cột cân đối -->
+      <div class="grid grid-cols-2 gap-6">
+
+        <!-- TKQC vừa đồng bộ — section 400px, header fix, tbody scroll 320px -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden max-h-[400px] flex flex-col">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+            <h2 class="text-base font-semibold text-[#060D10]">TKQC vừa đồng bộ</h2>
+            <a href="tkqc.html" class="text-sm text-[#21A691] font-medium hover:underline">Xem tất cả →</a>
+          </div>
+          <div class="overflow-auto custom-scroll max-h-[320px]">
+            <table class="w-full text-sm">
+              <thead class="bg-[#F8FAFB] text-slate-600 sticky top-0 z-10">
+                <tr>
+                  <th class="text-left font-medium px-6 py-3">Tên TKQC</th>
+                  <th class="text-left font-medium px-6 py-3">Khách hàng</th>
+                  <th class="text-left font-medium px-6 py-3">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody id="tkqc-tbody" class="divide-y divide-slate-100 custom-scroll"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Nhật ký hoạt động — section 400px, header fix, list scroll 320px -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden max-h-[400px] flex flex-col">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+            <h2 class="text-base font-semibold text-[#060D10]">Nhật ký hoạt động</h2>
+            <a href="nhatky.html" class="text-sm text-[#21A691] font-medium hover:underline">Xem tất cả →</a>
+          </div>
+          <ul id="nhatky-list" class="px-6 py-2 overflow-y-auto custom-scroll max-h-[320px]"></ul>
+        </section>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ===== Modal: Tất cả cảnh báo rủi ro (popup giữa màn hình) ===== -->
+  <div id="alerts-panel-wrapper" class="hidden fixed inset-0 z-50">
+    <!-- Overlay (click để đóng) -->
+    <div id="alerts-panel-overlay" class="absolute inset-0 bg-black/50"></div>
+    <!-- Modal box căn giữa với scale + opacity animation -->
+    <div id="alerts-panel"
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] max-w-[90vw] max-h-[80vh] bg-white rounded-2xl shadow-2xl flex flex-col scale-95 opacity-0 transition-all duration-200 ease-out">
+      <!-- Header (cố định) -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+        <div class="flex items-center gap-3 min-w-0">
+          <h2 class="text-xl font-bold text-[#060D10] truncate">Cảnh báo rủi ro</h2>
+          <span id="ap-count-badge"
+            class="inline-flex min-w-[24px] h-6 px-2 items-center justify-center rounded-full bg-[#EF4444] text-white text-xs font-bold">0</span>
+        </div>
+        <button onclick="closeAlertsPanel()" type="button"
+          class="p-1.5 hover:bg-slate-100 rounded-full transition flex-shrink-0" aria-label="Đóng">
+          <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+        </button>
+      </div>
+
+      <!-- Toolbar lọc (cố định dưới header) -->
+      <div class="px-6 py-3 border-b border-slate-200 shrink-0 bg-[#F8FAFB]">
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="ap-filter-muc"
+            class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none bg-white">
+            <option value="all">Tất cả mức độ</option>
+            <option value="cao">🔴 Cao</option>
+            <option value="trung_binh">🟡 Trung bình</option>
+            <option value="thap">🟢 Thấp</option>
+          </select>
+          <select id="ap-filter-status"
+            class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none bg-white">
+            <option value="all">Tất cả trạng thái</option>
+            <option value="chua_xu_ly">Chưa xử lý</option>
+            <option value="da_xu_ly">Đã xử lý</option>
+          </select>
+          <select id="ap-filter-loai"
+            class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none bg-white">
+            <option value="all">Tất cả loại</option>
+            <option value="Tài khoản bị vô hiệu hóa">Tài sản bị vô hiệu hóa</option>
+            <option value="Mất quyền truy cập">Mất quyền truy cập</option>
+            <option value="Token hết hạn">Token đã hết hạn</option>
+            <option value="Thiếu VIA backup">Thiếu VIA backup</option>
+            <option value="Token sắp hết hạn">Token sắp hết hạn</option>
+          </select>
+          <button onclick="resetAlertsFilter()" type="button"
+            class="ml-auto text-sm font-medium text-[#21A691] hover:bg-[#21A691]/10 px-3 py-1.5 rounded-lg transition">
+            Đặt lại
+          </button>
+        </div>
+      </div>
+
+      <!-- Body: danh sách cảnh báo (scroll) -->
+      <div id="ap-list" class="flex-1 overflow-y-auto custom-scroll"></div>
+
+      <!-- Footer (cố định dưới cùng) -->
+      <div class="border-t border-slate-200 px-6 py-3 flex items-center justify-between gap-3 shrink-0 bg-white rounded-b-2xl">
+        <div id="ap-footer-text" class="text-sm text-slate-600">—</div>
+        <button id="ap-mark-all-btn" onclick="markAllAlertsRead()" type="button"
+          class="text-sm font-medium border border-[#21A691] text-[#21A691] hover:bg-[#21A691]/5 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+          <i data-lucide="check-check" class="w-4 h-4"></i>
+          Đánh dấu tất cả đã xử lý
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Notification panel slide-in từ phải — chỉ để xem thông báo ===== -->
+  <div id="notif-backdrop" class="hidden fixed inset-0 bg-black/30 z-30 transition-opacity duration-200"></div>
+  <aside id="notif-panel" class="fixed top-0 right-0 h-screen w-80 sm:w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-40 flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+      <h2 class="text-base font-semibold text-[#060D10]">Thông báo</h2>
+      <button onclick="closeNotifPanel()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+        <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+      </button>
+    </div>
+    <div id="notif-list" class="flex-1 overflow-y-auto max-h-[calc(100vh-120px)]"></div>
+    <div class="border-t border-slate-200 p-3">
+      <button onclick="markAllRead()" type="button"
+        class="w-full text-sm font-medium text-[#21A691] hover:bg-[#21A691]/10 py-2 rounded-lg transition flex items-center justify-center gap-1.5">
+        <i data-lucide="check-check" class="w-4 h-4"></i>
+        Đánh dấu tất cả đã đọc
+      </button>
+    </div>
+  </aside>
+
+  <!-- Toast (dùng cho thao tác trong panel) -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2">
+    <i data-lucide="check-circle-2" class="w-5 h-5 text-[#21A691]"></i>
+    <span id="toast-message" class="text-sm font-medium text-[#060D10]">—</span>
+  </div>
+
+  <!-- Import scripts -->
+  <script src="../../assets/js/auth.js"></script>
+  <script src="../../assets/js/data.js"></script>
+  <script src="../../components/sidebar.js"></script>
+
+  <script>
+    // 1. Bảo vệ trang — chỉ cho leader vào
+    checkAuth('leader');
+
+    // 2. Render sidebar theo role leader
+    renderSidebar('leader');
+
+    // 3. Render tên + avatar người dùng trên header + bell badge dynamic
+    (function renderHeaderUser() {
+      const user = getCurrentUser();
+      if (!user) return;
+      const container = document.getElementById('header-user');
+      container.innerHTML = `
+        <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
+        <div class="w-9 h-9 rounded-full bg-[#21A691] text-white font-semibold flex items-center justify-center">
+          ${user.name.charAt(0).toUpperCase()}
+        </div>
+      `;
+      // Bell badge — số cảnh báo chưa xử lý (dynamic từ data.js)
+      const count = CANH_BAO.filter((c) => c.trangThai === 'chua_xu_ly').length;
+      const badge = document.getElementById('bell-badge');
+      if (badge) {
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+      // Render Lucide icons trong header (bell + log-out)
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    })();
+
+    // 4. Định nghĩa các icon SVG cho stats card
+    const ICON_CREDIT_CARD = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-6 h-6">
+        <path d="M2.273 5.625A4.483 4.483 0 015.25 4.5h9.5c1.141 0 2.183.425 2.977 1.125A3 3 0 0014.75 3h-9.5a3 3 0 00-2.977 2.625zM2.273 8.625A4.483 4.483 0 015.25 7.5h9.5c1.141 0 2.183.425 2.977 1.125A3 3 0 0014.75 6h-9.5a3 3 0 00-2.977 2.625zM5.25 9a3 3 0 00-3 3v3a3 3 0 003 3h9.5a3 3 0 003-3v-3a3 3 0 00-3-3h-9.5z"/>
+      </svg>`;
+    const ICON_USERS = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-6 h-6">
+        <path d="M10 9a3 3 0 100-6 3 3 0 000 6zM6 8a2 2 0 11-4 0 2 2 0 014 0zM1.49 15.326a.78.78 0 01-.358-.442 3 3 0 014.308-3.516 6.484 6.484 0 00-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 01-2.07-.655zM16.44 15.98a4.97 4.97 0 002.07-.654.78.78 0 00.357-.442 3 3 0 00-4.308-3.517 6.484 6.484 0 011.907 3.96 2.32 2.32 0 01-.026.654zM18 8a2 2 0 11-4 0 2 2 0 014 0zM5.304 16.19a.844.844 0 01-.277-.71 5 5 0 019.947 0 .843.843 0 01-.277.71A6.975 6.975 0 0110 18a6.974 6.974 0 01-4.696-1.81z"/>
+      </svg>`;
+    const ICON_BRIEFCASE = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-6 h-6">
+        <path fill-rule="evenodd" d="M6 3.75A2.75 2.75 0 018.75 1h2.5A2.75 2.75 0 0114 3.75v.443c.572.055 1.14.122 1.706.2C17.053 4.582 18 5.75 18 7.07v3.469c0 1.126-.694 2.191-1.83 2.54-1.952.599-4.024.921-6.17.921s-4.219-.322-6.17-.921C2.694 12.73 2 11.665 2 10.539V7.07c0-1.321.947-2.489 2.294-2.676A41.047 41.047 0 016 4.193V3.75zm6.5 0v.325a41.622 41.622 0 00-5 0V3.75c0-.69.56-1.25 1.25-1.25h2.5c.69 0 1.25.56 1.25 1.25z" clip-rule="evenodd"/>
+        <path d="M3 15.055v-.684c.126.053.255.1.39.142 2.092.642 4.313.987 6.61.987 2.297 0 4.518-.345 6.61-.987.135-.041.264-.089.39-.142v.684c0 1.347-.985 2.51-2.337 2.628-1.539.135-3.097.203-4.663.203-1.566 0-3.124-.068-4.663-.203C3.985 17.566 3 16.402 3 15.055z"/>
+      </svg>`;
+    const ICON_BELL = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-6 h-6">
+        <path fill-rule="evenodd" d="M10 2a6 6 0 00-6 6c0 1.887-.454 3.665-1.257 5.234a.75.75 0 00.515 1.076 32.91 32.91 0 003.256.508 3.5 3.5 0 006.972 0 32.903 32.903 0 003.256-.508.75.75 0 00.515-1.076A11.448 11.448 0 0116 8a6 6 0 00-6-6zM8.05 14.943a33.54 33.54 0 003.9 0 2 2 0 01-3.9 0z" clip-rule="evenodd"/>
+      </svg>`;
+
+    // 5. Render 4 thẻ thống kê — số liệu lấy từ data.js
+    (function renderStatsCards() {
+      const tongTKQC = TKQC.length;
+      const viaActive = VIA.filter(v => v.trangThai === 'active').length;
+      const tongKH = KHACH_HANG.length;
+      const canhBaoChuaXuLy = CANH_BAO.filter(c => c.trangThai === 'chua_xu_ly').length;
+
+      const cards = [
+        {
+          num: tongTKQC,
+          title: 'Tổng TKQC',
+          label: 'Tài khoản quảng cáo',
+          icon: ICON_CREDIT_CARD,
+          color: '#21A691',
+          danger: false
+        },
+        {
+          num: viaActive,
+          title: 'Tổng VIA',
+          label: 'VIA đang hoạt động',
+          icon: ICON_USERS,
+          color: '#87DF2C',
+          danger: false
+        },
+        {
+          num: tongKH,
+          title: 'Khách hàng',
+          label: 'Khách hàng đang phục vụ',
+          icon: ICON_BRIEFCASE,
+          color: '#27403E',
+          danger: false
+        },
+        {
+          num: canhBaoChuaXuLy,
+          title: 'Cảnh báo chưa xử lý',
+          label: 'Cần xử lý ngay',
+          icon: ICON_BELL,
+          color: '#EF4444',
+          danger: true
+        }
+      ];
+
+      const html = cards.map(c => {
+        const numColor = c.danger ? '#EF4444' : '#060D10';
+        // max-w-[280px] để card không bị quá rộng trên màn hình lớn
+        // border-top 3px màu accent của từng card
+        return `
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 w-full max-w-[280px]" style="border-top: 3px solid ${c.color};">
+            <div class="flex items-start justify-between mb-3">
+              <div class="text-xs font-medium text-slate-500 uppercase tracking-wide">${c.title}</div>
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${c.color}1A; color: ${c.color};">
+                ${c.icon}
+              </div>
+            </div>
+            <div class="text-3xl font-bold" style="color: ${numColor};">${c.num}</div>
+            <div class="text-sm text-slate-500 mt-1">${c.label}</div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('stats-cards').innerHTML = html;
+    })();
+
+    // 6. Helper render badge mức độ cảnh báo — nền #F1F5F9, chữ màu theo mức
+    function mucDoBadge(mucDo) {
+      const config = {
+        cao:         { text: '#EF4444', icon: '🔴', label: 'Cao' },
+        trung_binh:  { text: '#F59E0B', icon: '🟡', label: 'Trung bình' },
+        thap:        { text: '#21A691', icon: '🟢', label: 'Thấp' }
+      };
+      const c = config[mucDo] || config.thap;
+      return `<span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium" style="background-color: #F1F5F9; color: ${c.text};">${c.icon} ${c.label}</span>`;
+    }
+
+    // 7. Helper render badge trạng thái xử lý
+    function trangThaiBadge(trangThai) {
+      if (trangThai === 'chua_xu_ly') {
+        return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Chưa xử lý</span>`;
+      }
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Đã xử lý</span>`;
+    }
+
+    // 8. Render bảng cảnh báo rủi ro — action button thay đổi theo loại lỗi
+    // Xác định trang đích dựa trên prefix của taiSan
+    function targetPageOf(taiSan) {
+      if (taiSan.startsWith('TKQC_')) return 'tkqc.html';
+      if (taiSan.startsWith('VIA_'))  return 'via.html';
+      if (taiSan.startsWith('Page_') || taiSan.startsWith('FP')) return 'fanpage.html';
+      if (taiSan.startsWith('BM_'))   return 'bm.html';
+      return 'tkqc.html';
+    }
+    // Build action button HTML theo từng loại cảnh báo
+    function buildActionButton(cb) {
+      if (cb.trangThai === 'da_xu_ly') {
+        return '<span class="text-slate-400 text-sm">—</span>';
+      }
+      const id = encodeURIComponent(cb.id);
+      const tai = encodeURIComponent(cb.taiSan);
+      const target = targetPageOf(cb.taiSan);
+      const loai = cb.loai || '';
+
+      // Lỗi 1: Tài khoản bị vô hiệu hóa → Xử lý teal, navigate trang tài sản
+      if (loai === 'Tài khoản bị vô hiệu hóa') {
+        return `<a href="${target}?canhbao=${id}&taiSan=${tai}"
+          class="inline-flex px-3 py-1.5 text-xs font-medium text-white bg-[#21A691] hover:bg-[#1A8A78] rounded-md transition">Xử lý</a>`;
+      }
+      // Lỗi 2: Mất quyền truy cập → Xử lý teal, navigate via
+      if (loai === 'Mất quyền truy cập') {
+        return `<a href="via.html?canhbao=${id}&taiSan=${tai}"
+          class="inline-flex px-3 py-1.5 text-xs font-medium text-white bg-[#21A691] hover:bg-[#1A8A78] rounded-md transition">Xử lý</a>`;
+      }
+      // Lỗi 3: Token đã/đang hết hạn → Lấy lại token đỏ, navigate via + action
+      if (loai === 'Token hết hạn' || loai === 'Token đã hết hạn') {
+        return `<a href="via.html?canhbao=${id}&taiSan=${tai}&action=refresh_token"
+          class="inline-flex px-3 py-1.5 text-xs font-medium text-white bg-[#EF4444] hover:bg-[#DC2626] rounded-md transition">Lấy lại token</a>`;
+      }
+      // Lỗi 4: Thiếu VIA backup → Xem chi tiết outline teal, navigate trang tài sản
+      if (loai === 'Thiếu VIA backup') {
+        return `<a href="${target}?canhbao=${id}&taiSan=${tai}"
+          class="inline-flex px-3 py-1.5 text-xs font-medium text-[#21A691] border border-[#21A691] hover:bg-[#21A691]/5 rounded-md transition">Xem chi tiết</a>`;
+      }
+      // Lỗi 5: Token sắp hết hạn → Lấy lại token amber, navigate via + action
+      if (loai === 'Token sắp hết hạn') {
+        return `<a href="via.html?canhbao=${id}&taiSan=${tai}&action=refresh_token"
+          class="inline-flex px-3 py-1.5 text-xs font-medium text-white bg-[#F59E0B] hover:bg-[#D97706] rounded-md transition">Lấy lại token</a>`;
+      }
+      // Default fallback
+      return `<a href="${target}?canhbao=${id}&taiSan=${tai}"
+        class="inline-flex px-3 py-1.5 text-xs font-medium text-white bg-[#21A691] hover:bg-[#1A8A78] rounded-md transition">Xử lý</a>`;
+    }
+    function renderAlertsTable() {
+      const tbody = document.getElementById('alerts-tbody');
+      tbody.innerHTML = CANH_BAO.map(cb => `
+        <tr>
+          <td class="px-6 py-3 font-medium text-[#060D10]">${cb.taiSan}</td>
+          <td class="px-6 py-3 text-slate-600">${cb.loai}</td>
+          <td class="px-6 py-3">${mucDoBadge(cb.mucDo)}</td>
+          <td class="px-6 py-3 text-slate-500 text-xs">${cb.thoiGian}</td>
+          <td class="px-6 py-3">${trangThaiBadge(cb.trangThai)}</td>
+          <td class="px-6 py-3 text-right">${buildActionButton(cb)}</td>
+        </tr>
+      `).join('');
+    }
+    renderAlertsTable();
+
+    // 9. Render bảng TKQC vừa đồng bộ — chỉ lấy 5 bản ghi đầu
+    (function renderTkqcTable() {
+      // Lookup nhanh tên khách hàng theo mã KH
+      const khMap = Object.fromEntries(KHACH_HANG.map(k => [k.id, k.ten]));
+      const tbody = document.getElementById('tkqc-tbody');
+
+      tbody.innerHTML = TKQC.slice(0, 5).map(t => {
+        const tenKH = khMap[t.maKH] || '—';
+        const isDisabled = t.trangThai === 'disabled';
+        const trangThai = isDisabled
+          ? `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu</span>`
+          : `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>`;
+        // Highlight row TKQC vô hiệu: nền đỏ nhạt + chữ mờ
+        const rowClass = isDisabled ? 'bg-red-50' : '';
+        const cellText = isDisabled ? 'text-slate-400' : 'text-slate-600';
+        const nameText = isDisabled ? 'text-slate-400' : 'text-[#060D10]';
+        return `
+          <tr class="${rowClass}">
+            <td class="px-6 py-3 font-medium ${nameText}">${t.ten}</td>
+            <td class="px-6 py-3 ${cellText}">${tenKH}</td>
+            <td class="px-6 py-3">${trangThai}</td>
+          </tr>
+        `;
+      }).join('');
+    })();
+
+    // 10. Render danh sách nhật ký hoạt động dạng timeline — màu avatar phân biệt theo loại
+    (function renderNhatKy() {
+      const NK_ICONS = {
+        gan_tai_nguyen:   '🔗',
+        canh_bao:         '⚠️',
+        dang_nhap_via:    '🔑',
+        xu_ly_canh_bao:   '✅',
+        dong_bo:          '🔄'
+      };
+      // Màu nền avatar theo loại hoạt động
+      const NK_BG = {
+        gan_tai_nguyen:  '#21A691',
+        canh_bao:        '#EF4444',
+        dong_bo:         '#27403E',
+        dang_nhap_via:   '#87DF2C',
+        xu_ly_canh_bao:  '#F59E0B'
+      };
+      const list = document.getElementById('nhatky-list');
+      list.innerHTML = NHAT_KY.map((nk, idx) => {
+        const icon = NK_ICONS[nk.loai] || '📌';
+        const bg = NK_BG[nk.loai] || '#21A691';
+        const initial = nk.nguoi.charAt(0).toUpperCase();
+        const isLast = idx === NHAT_KY.length - 1;
+        return `
+          <li class="flex gap-3 py-3 ${isLast ? '' : 'border-b border-slate-100'}">
+            <div class="w-9 h-9 rounded-full text-white text-sm font-semibold flex items-center justify-center flex-shrink-0" style="background-color: ${bg};">
+              ${initial}
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm leading-snug">
+                <span class="font-semibold text-[#060D10]">${nk.nguoi}</span>
+                <span class="text-slate-600"> ${nk.hanhDong}</span>
+                <span class="ml-1">${icon}</span>
+              </p>
+              <p class="text-xs text-slate-400 mt-0.5">${nk.thoiGian}</p>
+            </div>
+          </li>
+        `;
+      }).join('');
+    })();
+
+    // 11. Panel "Tất cả cảnh báo rủi ro" — slide từ phải khi click "Xem tất cả →"
+    function refreshIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    }
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = message;
+      toast.classList.remove('hidden');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    function openAlertsPanel() {
+      const wrapper = document.getElementById('alerts-panel-wrapper');
+      const panel = document.getElementById('alerts-panel');
+      wrapper.classList.remove('hidden');
+      // Force reflow rồi đổi class để kích hoạt scale + opacity transition
+      requestAnimationFrame(() => {
+        panel.classList.remove('scale-95', 'opacity-0');
+        panel.classList.add('scale-100', 'opacity-100');
+      });
+      // Lock body scroll
+      document.body.style.overflow = 'hidden';
+      renderAlertsPanel();
+    }
+    function closeAlertsPanel() {
+      const wrapper = document.getElementById('alerts-panel-wrapper');
+      const panel = document.getElementById('alerts-panel');
+      panel.classList.remove('scale-100', 'opacity-100');
+      panel.classList.add('scale-95', 'opacity-0');
+      // Đợi animation 200ms xong rồi ẩn wrapper + khôi phục scroll
+      setTimeout(() => {
+        wrapper.classList.add('hidden');
+        document.body.style.overflow = '';
+      }, 200);
+    }
+
+    // Render 1 item cảnh báo trong panel — chỉ hiển thị badge trạng thái, không có nút hành động
+    function renderAlertItem(cb) {
+      const mucBorder = { cao: '#EF4444', trung_binh: '#F59E0B', thap: '#21A691' }[cb.mucDo] || '#64748B';
+      const action = cb.trangThai === 'da_xu_ly'
+        ? `<span class="inline-flex items-center gap-1 text-xs font-medium text-[#21A691]">
+             <i data-lucide="check-circle-2" class="w-4 h-4"></i> Đã xử lý
+           </span>`
+        : `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Chưa xử lý</span>`;
+      return `
+        <div class="px-5 py-3 border-b border-slate-100 hover:bg-[#F8FAFB] transition" style="border-left: 4px solid ${mucBorder};">
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-sm text-[#060D10]">${cb.taiSan}</p>
+            <p class="text-xs text-slate-500 mt-0.5">${cb.loai}</p>
+            <div class="flex items-center flex-wrap gap-2 mt-2">
+              ${mucDoBadge(cb.mucDo)}
+              ${trangThaiBadge(cb.trangThai)}
+              <span class="text-xs text-slate-400">${cb.thoiGian}</span>
+            </div>
+          </div>
+          <div class="mt-3 flex justify-end">${action}</div>
+        </div>
+      `;
+    }
+
+    // Render toàn bộ panel theo filter hiện tại
+    function renderAlertsPanel() {
+      const muc = document.getElementById('ap-filter-muc').value;
+      const status = document.getElementById('ap-filter-status').value;
+      const loai = document.getElementById('ap-filter-loai').value;
+
+      const filtered = CANH_BAO.filter((cb) => {
+        const matchMuc = muc === 'all' || cb.mucDo === muc;
+        const matchStatus = status === 'all' || cb.trangThai === status;
+        // Map filter "Token hết hạn" hỗ trợ cả "Token đã hết hạn"
+        const matchLoai = loai === 'all'
+          || cb.loai === loai
+          || (loai === 'Token hết hạn' && cb.loai === 'Token đã hết hạn');
+        return matchMuc && matchStatus && matchLoai;
+      });
+
+      const list = document.getElementById('ap-list');
+      if (filtered.length === 0) {
+        list.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <i data-lucide="shield-check" class="w-12 h-12 text-[#21A691] mb-3"></i>
+            <p class="text-sm font-medium text-slate-500">Không có cảnh báo nào phù hợp</p>
+          </div>`;
+      } else {
+        list.innerHTML = filtered.map(renderAlertItem).join('');
+      }
+
+      // Cập nhật badge count + footer text
+      const totalUnread = CANH_BAO.filter((c) => c.trangThai === 'chua_xu_ly').length;
+      const badge = document.getElementById('ap-count-badge');
+      badge.textContent = totalUnread;
+      badge.classList.toggle('hidden', totalUnread === 0);
+      document.getElementById('ap-footer-text').innerHTML =
+        `Tổng: <span class="font-semibold text-[#060D10]">${CANH_BAO.length}</span> cảnh báo — ` +
+        `<span class="font-semibold text-[#EF4444]">${totalUnread}</span> chưa xử lý`;
+
+      // Disable nút "Đánh dấu tất cả" khi không còn cảnh báo chưa xử lý
+      const markBtn = document.getElementById('ap-mark-all-btn');
+      markBtn.disabled = totalUnread === 0;
+      markBtn.classList.toggle('opacity-50', totalUnread === 0);
+      markBtn.classList.toggle('cursor-not-allowed', totalUnread === 0);
+
+      refreshIcons();
+    }
+
+    // Listener filter — re-render khi đổi
+    ['ap-filter-muc', 'ap-filter-status', 'ap-filter-loai'].forEach((id) => {
+      document.getElementById(id).addEventListener('change', renderAlertsPanel);
+    });
+
+    function resetAlertsFilter() {
+      document.getElementById('ap-filter-muc').value = 'all';
+      document.getElementById('ap-filter-status').value = 'all';
+      document.getElementById('ap-filter-loai').value = 'all';
+      renderAlertsPanel();
+    }
+
+    function markAllAlertsRead() {
+      // Mutate CANH_BAO in-place (in-memory, không persist)
+      CANH_BAO.forEach((cb) => {
+        if (cb.trangThai === 'chua_xu_ly') cb.trangThai = 'da_xu_ly';
+      });
+      // Re-render cả panel và bảng cảnh báo trên dashboard
+      renderAlertsPanel();
+      renderAlertsTable();
+      showToast('Đã đánh dấu tất cả đã xử lý');
+    }
+
+    // 12. Notification panel — chỉ để xem, không filter, không hành động
+    const notifRead = new Set();
+    // Mặc định: cảnh báo đã xử lý = đã đọc
+    CANH_BAO.forEach((cb) => {
+      if (cb.trangThai === 'da_xu_ly') notifRead.add(cb.id);
+    });
+
+    function updateBellBadge() {
+      const unread = CANH_BAO.filter((cb) => !notifRead.has(cb.id)).length;
+      const badge = document.getElementById('bell-badge');
+      badge.textContent = unread;
+      badge.classList.toggle('hidden', unread === 0);
+    }
+
+    function renderNotifList() {
+      const list = document.getElementById('notif-list');
+      const items = CANH_BAO;
+      if (items.length === 0) {
+        list.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm">
+          <i data-lucide="bell-off" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+          Không có thông báo
+        </div>`;
+      } else {
+        const ICON_BY_MUC = { cao: 'alert-triangle', trung_binh: 'alert-circle', thap: 'info' };
+        const COLOR_BY_MUC = { cao: '#EF4444', trung_binh: '#F59E0B', thap: '#21A691' };
+        list.innerHTML = items.map((cb) => {
+          const isRead = notifRead.has(cb.id);
+          const icon = ICON_BY_MUC[cb.mucDo] || 'bell';
+          const color = COLOR_BY_MUC[cb.mucDo] || '#64748B';
+          return `
+            <div class="px-4 py-3 border-b border-slate-100 flex gap-3 hover:bg-[#F8FAFB] transition cursor-pointer ${isRead ? '' : 'bg-[#21A691]/5'}"
+              onclick="markRead('${cb.id}')">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background-color: ${color}1A;">
+                <i data-lucide="${icon}" class="w-4 h-4" style="color: ${color};"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="text-sm ${isRead ? 'text-slate-600' : 'text-[#060D10] font-medium'} flex-1">
+                    ${cb.taiSan}
+                  </div>
+                  ${isRead
+                    ? '<span class="text-[10px] text-slate-400 flex-shrink-0">Đã đọc</span>'
+                    : '<span class="w-2 h-2 rounded-full bg-[#21A691] flex-shrink-0 mt-1.5"></span>'}
+                </div>
+                <div class="text-xs text-slate-500 mt-0.5">${cb.loai}</div>
+                <div class="text-xs text-slate-400 mt-1">${cb.thoiGian}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+      refreshIcons();
+    }
+
+    function markRead(id) {
+      notifRead.add(id);
+      renderNotifList();
+      updateBellBadge();
+    }
+    function markAllRead() {
+      CANH_BAO.forEach((cb) => notifRead.add(cb.id));
+      renderNotifList();
+      updateBellBadge();
+      showToast('Đã đánh dấu tất cả thông báo là đã đọc');
+    }
+    function toggleNotifPanel() {
+      const panel = document.getElementById('notif-panel');
+      const isOpen = !panel.classList.contains('translate-x-full');
+      if (isOpen) closeNotifPanel(); else openNotifPanel();
+    }
+    function openNotifPanel() {
+      document.getElementById('notif-panel').classList.remove('translate-x-full');
+      document.getElementById('notif-backdrop').classList.remove('hidden');
+      renderNotifList();
+    }
+    function closeNotifPanel() {
+      document.getElementById('notif-panel').classList.add('translate-x-full');
+      document.getElementById('notif-backdrop').classList.add('hidden');
+    }
+    document.getElementById('notif-backdrop').addEventListener('click', closeNotifPanel);
+
+    renderNotifList();
+    updateBellBadge();
+
+    // Đóng modal khi click overlay hoặc nhấn ESC
+    document.getElementById('alerts-panel-overlay').addEventListener('click', closeAlertsPanel);
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const wrapper = document.getElementById('alerts-panel-wrapper');
+      if (!wrapper.classList.contains('hidden')) closeAlertsPanel();
+      closeNotifPanel();
+    });
+  </script>
+</body>
+</html>

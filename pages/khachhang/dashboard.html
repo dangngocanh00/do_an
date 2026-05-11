@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Khách hàng | TN Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
+    table tbody tr { transition: background-color 0.15s ease; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .toast-show { animation: toastIn 220ms ease-out; }
+  </style>
+</head>
+<body class="bg-[#F0F4F4]">
+  <!-- Sidebar -->
+  <div id="sidebar"></div>
+
+  <!-- Header dùng chung -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+    <div class="flex items-center gap-2">
+      <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <div id="header-user" class="flex items-center gap-2 px-2"></div>
+      <button onclick="logout()" type="button"
+        class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+    <div class="max-w-screen-xl mx-auto px-6 py-6">
+
+      <!-- 1. Page header -->
+      <div class="mb-5">
+        <h1 class="text-2xl font-bold text-[#060D10]">Dashboard</h1>
+        <p class="text-sm text-[#64748B] mt-1">Tổng quan tài nguyên của bạn</p>
+        <p id="greeting" class="text-sm font-medium text-[#21A691] mt-2">— Xin chào, —</p>
+      </div>
+
+      <!-- 2. Welcome banner gradient -->
+      <div id="welcome-banner" class="rounded-xl p-6 mb-6 text-white shadow-sm relative overflow-hidden"
+        style="background: linear-gradient(135deg, #27403E 0%, #21A691 100%);">
+        <div class="relative z-10 flex items-center justify-between gap-4">
+          <div class="flex-1 min-w-0">
+            <h2 id="welcome-title" class="text-xl sm:text-2xl font-bold">Chào mừng trở lại</h2>
+            <p class="text-sm text-white/80 mt-1.5">Dưới đây là tổng quan tài nguyên quảng cáo của bạn</p>
+          </div>
+          <i data-lucide="building-2" class="w-16 h-16 text-white/30 flex-shrink-0 hidden sm:block" stroke-width="1"></i>
+        </div>
+      </div>
+
+      <!-- 3. Stats mini -->
+      <div id="stats-mini" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6"></div>
+
+      <!-- 4. Grid 2 cột: TKQC + Fanpage -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- TKQC -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-200">
+            <h2 class="text-base font-semibold text-[#060D10]">TKQC của tôi</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Tài khoản quảng cáo đang được agency vận hành</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-[#F8FAFB] text-slate-600">
+                <tr>
+                  <th class="text-left font-medium px-4 py-3">Tên TKQC</th>
+                  <th class="text-left font-medium px-4 py-3">Hạn mức</th>
+                  <th class="text-left font-medium px-4 py-3">Đã chi tiêu</th>
+                  <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                  <th class="text-left font-medium px-4 py-3">Đồng bộ</th>
+                </tr>
+              </thead>
+              <tbody id="tkqc-tbody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Fanpage -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="px-6 py-4 border-b border-slate-200">
+            <h2 class="text-base font-semibold text-[#060D10]">Fanpage của tôi</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Fanpage đang được agency quản lý</p>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-[#F8FAFB] text-slate-600">
+                <tr>
+                  <th class="text-left font-medium px-4 py-3">Tên Fanpage</th>
+                  <th class="text-left font-medium px-4 py-3">Followers</th>
+                  <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                  <th class="text-left font-medium px-4 py-3">Đồng bộ</th>
+                </tr>
+              </thead>
+              <tbody id="fp-tbody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- 5. Footer info — Nhân sự phụ trách -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+        <div id="ns-info" class="flex items-center gap-4"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2">
+    <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5 text-[#21A691]"></i>
+    <span id="toast-message" class="text-sm font-medium text-[#060D10]">—</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../assets/js/auth.js"></script>
+  <script src="../../assets/js/data.js"></script>
+  <script src="../../components/sidebar.js"></script>
+
+  <script>
+    // 0. Bảo vệ + sidebar
+    checkAuth('khachhang');
+    renderSidebar('khachhang');
+
+    // 1. Helpers
+    function refreshIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    }
+    function formatNumber(n) { return Number(n).toLocaleString('vi-VN'); }
+    function formatVND(n) { return Number(n).toLocaleString('vi-VN') + 'đ'; }
+    function progressColor(pct) {
+      if (pct >= 90) return '#EF4444';
+      if (pct >= 70) return '#F59E0B';
+      return '#21A691';
+    }
+
+    // 2. Xác định KH đang đăng nhập
+    // Demo: user.name khớp với tên trong KHACH_HANG (kh@agency.com → "Công ty ABC" → KH001)
+    const user = getCurrentUser();
+    const myKH = KHACH_HANG.find((k) => k.ten === user.name) || KHACH_HANG[0];
+
+    // 3. Lọc data theo maKH
+    const MY_TKQC = TKQC.filter((t) => t.maKH === myKH.id);
+    const MY_FANPAGE = FANPAGE.filter((f) => f.maKH === myKH.id);
+    // Cảnh báo liên quan: taiSan match TKQC/Fanpage thuộc KH này
+    const myTkqcTens = new Set(MY_TKQC.map((t) => t.ten));
+    const myFpTens = new Set(MY_FANPAGE.map((f) => f.ten));
+    const MY_ALERTS = CANH_BAO.filter((cb) =>
+      myTkqcTens.has(cb.taiSan) || myFpTens.has(cb.taiSan)
+    );
+
+    // Lookup
+    const nsByEmail = Object.fromEntries(NHAN_SU.map((n) => [n.email, n]));
+    // Mock đồng bộ lần cuối cho TKQC (data.js không có field này)
+    const TKQC_LAST_SYNC = {
+      TKQC001: '5 phút trước',
+      TKQC002: '15 phút trước',
+      TKQC003: '1 giờ trước',
+      TKQC004: '20 phút trước',
+      TKQC005: '5 phút trước',
+      TKQC006: '10 phút trước',
+      TKQC007: '15 phút trước',
+      TKQC008: '30 phút trước'
+    };
+
+    // 4. Render header user (tên KH + avatar) — KH role không có bell
+    (function renderHeaderUser() {
+      document.getElementById('header-user').innerHTML = `
+        <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
+        <div class="w-9 h-9 rounded-full bg-[#21A691] text-white font-semibold flex items-center justify-center">
+          ${user.name.charAt(0).toUpperCase()}
+        </div>
+      `;
+    })();
+
+    // 5. Greeting + welcome banner
+    document.getElementById('greeting').innerHTML = `👋 Xin chào, <span class="font-semibold">${myKH.ten}</span>`;
+    document.getElementById('welcome-title').textContent = `Chào mừng trở lại, ${myKH.ten}`;
+
+    // 6. Badge helpers
+    function tkqcStatusBadge(trangThai) {
+      if (trangThai === 'active') {
+        return `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>`;
+      }
+      return `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu</span>`;
+    }
+    function fpStatusBadge(trangThai) {
+      const cfg = {
+        active:     { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động' },
+        restricted: { bg: '#FEF3C7', color: '#F59E0B', label: 'Bị hạn chế' },
+        disabled:   { bg: '#FEE2E2', color: '#EF4444', label: 'Vô hiệu' }
+      }[trangThai] || { bg: '#F1F5F9', color: '#64748B', label: trangThai };
+      return `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
+    }
+    function alertLevelBadge(mucDo) {
+      const cfg = {
+        cao:        { color: '#EF4444', label: 'Cao' },
+        trung_binh: { color: '#F59E0B', label: 'Trung bình' },
+        thap:       { color: '#21A691', label: 'Thấp' }
+      }[mucDo] || { color: '#64748B', label: mucDo };
+      return `<span class="text-xs font-medium px-2 py-0.5 rounded" style="background-color: #F1F5F9; color: ${cfg.color};">${cfg.label}</span>`;
+    }
+
+    // 7. Stats mini
+    (function renderStatsMini() {
+      const cards = [
+        { num: MY_TKQC.length,    label: 'TKQC đang dùng',     icon: 'credit-card', color: '#21A691', numColor: '#21A691' },
+        { num: MY_FANPAGE.length, label: 'Fanpage đang dùng',  icon: 'flag',        color: '#21A691', numColor: '#21A691' },
+        { num: MY_ALERTS.length,  label: 'Cảnh báo liên quan', icon: 'bell',        color: '#EF4444', numColor: '#EF4444' }
+      ];
+      document.getElementById('stats-mini').innerHTML = cards.map((c) => `
+        <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${c.color}1A; color: ${c.color};">
+            <i data-lucide="${c.icon}" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" style="color: ${c.numColor};">${c.num}</div>
+            <div class="text-xs text-slate-500">${c.label}</div>
+          </div>
+        </div>
+      `).join('');
+    })();
+
+    // 8. Render bảng TKQC (read-only, không hiện VIA hay thao tác)
+    (function renderTKQC() {
+      const tbody = document.getElementById('tkqc-tbody');
+      if (MY_TKQC.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">Chưa có TKQC nào</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = MY_TKQC.map((t) => {
+        const pct = t.hanMuc > 0 ? (t.chiTieu / t.hanMuc) * 100 : 0;
+        const barColor = progressColor(pct);
+        return `
+          <tr class="hover:bg-[#F0F4F4]">
+            <td class="px-4 py-3 font-medium text-[#060D10]">${t.ten}</td>
+            <td class="px-4 py-3 text-slate-700">${formatVND(t.hanMuc)}</td>
+            <td class="px-4 py-3">
+              <div class="text-sm text-slate-700">${formatVND(t.chiTieu)}</div>
+              <div class="mt-1 w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full" style="width: ${pct}%; background-color: ${barColor};"></div>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-0.5">${pct.toFixed(0)}% / hạn mức</div>
+            </td>
+            <td class="px-4 py-3">${tkqcStatusBadge(t.trangThai)}</td>
+            <td class="px-4 py-3 text-slate-500 text-xs">${TKQC_LAST_SYNC[t.id] || '—'}</td>
+          </tr>
+        `;
+      }).join('');
+    })();
+
+    // 9. Render bảng Fanpage (read-only)
+    (function renderFanpage() {
+      const tbody = document.getElementById('fp-tbody');
+      if (MY_FANPAGE.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 text-sm">Chưa có Fanpage nào</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = MY_FANPAGE.map((f) => `
+        <tr class="hover:bg-[#F0F4F4]">
+          <td class="px-4 py-3 font-medium text-[#060D10]">${f.ten}</td>
+          <td class="px-4 py-3 text-slate-700">${formatNumber(f.followers)}</td>
+          <td class="px-4 py-3">${fpStatusBadge(f.trangThai)}</td>
+          <td class="px-4 py-3 text-slate-500 text-xs">${f.dongBoLanCuoi}</td>
+        </tr>
+      `).join('');
+    })();
+
+    // 10. Footer info — Nhân sự phụ trách
+    (function renderNSInfo() {
+      const ns = nsByEmail[myKH.nhanSuPhuTrach];
+      const container = document.getElementById('ns-info');
+      if (!ns) {
+        container.innerHTML = `<p class="text-sm text-slate-500">Chưa có nhân sự phụ trách</p>`;
+        return;
+      }
+      const initial = ns.ten.charAt(0).toUpperCase();
+      container.innerHTML = `
+        <div class="w-12 h-12 rounded-full bg-[#21A691] text-white flex items-center justify-center text-lg font-bold flex-shrink-0">
+          ${initial}
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-xs text-slate-500">Nhân sự phụ trách của bạn</p>
+          <p class="text-sm font-semibold text-[#060D10] truncate">${ns.ten}</p>
+          <p class="text-xs text-slate-500 mt-0.5 truncate">
+            <i data-lucide="mail" class="inline w-3 h-3 mr-1 align-text-bottom"></i>${ns.email}
+          </p>
+        </div>
+        <p class="text-xs text-slate-500 self-center hidden md:flex items-center gap-1.5 max-w-[200px]">
+          <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0"></i>
+          <span>Liên hệ nhân sự phụ trách nếu có vấn đề về tài nguyên</span>
+        </p>
+      `;
+      refreshIcons();
+    })();
+
+    // Render Lucide cho lần đầu (sau khi mọi block đã đẩy HTML vào)
+    refreshIcons();
+  </script>
+</body>
+</html>

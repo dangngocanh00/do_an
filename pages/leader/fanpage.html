@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý Fanpage — Leader | TN Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
+    table tbody tr { transition: background-color 0.15s ease; }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-panel { animation: modalIn 180ms ease-out; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .toast-show { animation: toastIn 220ms ease-out; }
+  </style>
+</head>
+<body class="bg-[#F0F4F4]">
+  <!-- Sidebar -->
+  <div id="sidebar"></div>
+
+  <!-- Header dùng chung -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+    <div class="flex items-center gap-2">
+      <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" class="relative p-2 rounded-full hover:bg-slate-100 transition" aria-label="Thông báo">
+        <i data-lucide="bell" class="w-5 h-5 text-slate-600" stroke-width="1.5"></i>
+        <span id="bell-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#EF4444] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">0</span>
+      </button>
+      <div id="header-user" class="flex items-center gap-2 px-2"></div>
+      <button onclick="logout()" type="button"
+        class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+    <div class="max-w-screen-xl mx-auto px-6 py-6">
+
+      <!-- 1. Page header -->
+      <div class="flex items-start justify-between mb-6 gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-[#060D10]">Quản lý Fanpage</h1>
+          <p class="text-sm text-[#64748B] mt-1">Danh sách Fanpage trong hệ thống</p>
+        </div>
+        <button id="sync-all-btn" onclick="syncAll()" type="button"
+          class="bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm flex-shrink-0">
+          <i data-lucide="refresh-cw" class="w-4 h-4" stroke-width="2"></i>
+          Đồng bộ tất cả
+        </button>
+      </div>
+
+      <!-- 2. Stats mini -->
+      <div id="stats-mini" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"></div>
+
+      <!-- 3. Toolbar -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex flex-wrap items-center gap-3">
+        <div class="relative flex-1 min-w-[220px] max-w-md">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+          <input id="search-input" type="text"
+            placeholder="Tìm theo tên Fanpage..."
+            class="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition" />
+        </div>
+        <select id="filter-status"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả trạng thái</option>
+          <option value="active">Hoạt động</option>
+          <option value="restricted">Bị hạn chế</option>
+          <option value="disabled">Vô hiệu</option>
+        </select>
+        <select id="filter-customer"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả khách hàng</option>
+        </select>
+        <select id="filter-bm"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả BM</option>
+        </select>
+        <div id="total-count" class="ml-auto text-sm text-slate-600 font-medium">Tổng: 0 Fanpage</div>
+      </div>
+
+      <!-- Banner cảnh báo (hiện khi navigate từ dashboard với canhbao param) -->
+      <div id="alert-banner" class="hidden mb-4 rounded-xl p-3 border" style="background-color: #FEF2F2; border-color: #EF4444;">
+        <div class="flex items-start gap-2">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-[#EF4444] flex-shrink-0 mt-0.5"></i>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-red-900">⚠️ Đang xử lý cảnh báo: <span id="alert-banner-loai">—</span></p>
+            <p class="text-xs text-red-700 mt-0.5">Fanpage liên quan: <span id="alert-banner-asset" class="font-mono font-medium">—</span></p>
+          </div>
+          <button onclick="clearAlertHighlight()" type="button" class="text-red-600 hover:bg-red-100 p-1 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Bảng Fanpage -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-[#F8FAFB] text-slate-600">
+              <tr>
+                <th class="text-left font-medium px-4 py-3 w-12">STT</th>
+                <th class="text-left font-medium px-4 py-3">ID Fanpage</th>
+                <th class="text-left font-medium px-4 py-3">Tên Fanpage</th>
+                <th class="text-left font-medium px-4 py-3">Khách hàng</th>
+                <th class="text-left font-medium px-4 py-3">Followers</th>
+                <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                <th class="text-left font-medium px-4 py-3">Đồng bộ lần cuối</th>
+                <th class="text-right font-medium px-4 py-3">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="fp-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <div id="pagination"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ===== Modal: Gán khách hàng ===== -->
+  <div id="assign-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md modal-panel">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 class="text-lg font-semibold text-[#060D10]">Gán Fanpage cho khách hàng</h2>
+          <button onclick="closeAssignModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <!-- Fanpage name -->
+          <div>
+            <div class="text-xs text-slate-500 mb-1">Fanpage đang thao tác</div>
+            <div id="assign-fp-name" class="text-base font-semibold text-[#060D10]">—</div>
+          </div>
+
+          <!-- Trạng thái gán hiện tại -->
+          <div>
+            <div class="text-xs text-slate-500 mb-1.5">Trạng thái gán</div>
+            <!-- Empty state (Case 1: chưa có KH) -->
+            <p id="assign-empty-state" class="hidden text-sm text-slate-400 italic">Fanpage này chưa được gán cho khách hàng nào</p>
+            <!-- Current KH (Case 2: đã có KH) -->
+            <div id="assign-current-block" class="hidden flex items-center justify-between gap-3 flex-wrap">
+              <span id="assign-current-name" class="inline-flex px-3 py-1 rounded-full text-sm font-medium"
+                style="background-color: #E1F5EE; color: #085041;">—</span>
+              <button onclick="openRevokeModal()" type="button"
+                class="text-xs font-medium px-3 py-1.5 rounded border transition flex items-center gap-1.5 hover:opacity-80"
+                style="background-color: #FEE2E2; color: #EF4444; border-color: #EF4444;">
+                <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                Thu hồi khỏi khách hàng này
+              </button>
+            </div>
+          </div>
+
+          <!-- Cảnh báo vàng (chỉ hiện trong Case 2) -->
+          <div id="assign-warning-current" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-3 flex gap-2">
+            <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"></i>
+            <p class="text-xs text-amber-800">⚠️ Cần thu hồi khỏi <span id="assign-warning-current-name" class="font-semibold">—</span> trước khi gán cho khách hàng mới</p>
+          </div>
+
+          <!-- Dropdown chọn KH (auto enabled/disabled theo case) -->
+          <div>
+            <label for="assign-select" class="block text-xs text-slate-500 mb-1">Chọn khách hàng</label>
+            <select id="assign-select"
+              class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none bg-white disabled:opacity-50 disabled:cursor-not-allowed">
+            </select>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+          <button onclick="closeAssignModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Hủy</button>
+          <button id="assign-confirm-btn" onclick="confirmAssign()" type="button"
+            class="px-4 py-2 text-sm font-medium bg-[#21A691] hover:bg-[#1A8A78] text-white rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed">Xác nhận gán</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Thu hồi Fanpage (confirm dialog) ===== -->
+  <div id="revoke-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md modal-panel">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 class="text-lg font-semibold text-[#060D10]">Thu hồi Fanpage khỏi khách hàng</h2>
+          <button onclick="closeRevokeModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <!-- Cảnh báo đỏ -->
+          <div class="bg-red-50 border border-red-200 rounded-lg p-3 flex gap-2">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-[#EF4444] flex-shrink-0 mt-0.5"></i>
+            <p class="text-sm text-red-800">Xác nhận thu hồi Fanpage <span id="revoke-fp-name" class="font-semibold">—</span> khỏi <span id="revoke-current-name" class="font-semibold">—</span>?</p>
+          </div>
+          <!-- Thông tin -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <div class="text-xs text-slate-500 mb-1">Fanpage</div>
+              <div id="revoke-fp-name-2" class="text-sm font-semibold text-[#060D10]">—</div>
+            </div>
+            <div>
+              <div class="text-xs text-slate-500 mb-1">Khách hàng hiện tại</div>
+              <div id="revoke-current-name-2" class="text-sm font-semibold text-[#060D10]">—</div>
+            </div>
+          </div>
+          <!-- Checkbox xác nhận BR-06 -->
+          <label class="flex items-start gap-2 cursor-pointer pt-1">
+            <input id="revoke-confirm" type="checkbox" onchange="toggleRevokeBtn()"
+              class="mt-1 w-4 h-4 rounded border-slate-300 text-[#21A691] focus:ring-[#21A691] cursor-pointer" />
+            <span class="text-sm text-slate-700">Tôi xác nhận không có chiến dịch đang chạy trên Fanpage này (BR-06)</span>
+          </label>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+          <button onclick="closeRevokeModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Hủy</button>
+          <button id="revoke-btn" onclick="confirmRevoke()" type="button" disabled
+            class="px-4 py-2 text-sm font-medium bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-lg transition opacity-50 cursor-not-allowed">
+            Thu hồi
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Chi tiết Fanpage ===== -->
+  <div id="detail-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl modal-panel max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div class="flex items-center gap-3">
+            <h2 id="detail-title" class="text-lg font-semibold text-[#060D10]">—</h2>
+            <span id="detail-status-badge"></span>
+          </div>
+          <button onclick="closeDetailModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 space-y-5">
+          <!-- Banner cảnh báo trong modal (hiện khi navigate từ dashboard) -->
+          <div id="detail-alert-banner" class="hidden rounded-lg p-3 border" style="background-color: #FEF2F2; border-color: #EF4444;">
+            <div class="flex items-start gap-2">
+              <i data-lucide="alert-triangle" class="w-5 h-5 text-[#EF4444] flex-shrink-0 mt-0.5"></i>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-red-900">⚠️ Fanpage này đang có cảnh báo: <span id="detail-alert-loai">—</span></p>
+                <p class="text-xs text-red-800 mt-0.5">Vui lòng xử lý bên ngoài Facebook rồi bấm <strong>Đồng bộ ngay</strong> để cập nhật.</p>
+              </div>
+            </div>
+          </div>
+          <!-- 4 ô thông tin -->
+          <div id="detail-info" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+
+          <!-- Thông tin VIA/BM -->
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-3">Thông tin VIA/BM</h3>
+            <!-- Phần 1: BM chứa Fanpage này -->
+            <div class="mb-4">
+              <p class="text-xs font-medium text-slate-500 mb-2">BM:</p>
+              <ul id="detail-bm-list" class="space-y-1.5"></ul>
+            </div>
+            <hr class="border-slate-100">
+            <!-- Phần 2: VIA đang cầm quyền -->
+            <div class="mt-4">
+              <p class="text-xs font-medium text-slate-500 mb-2">Via:</p>
+              <ul id="detail-via-list" class="space-y-1.5"></ul>
+            </div>
+          </div>
+
+          <!-- Lịch sử đồng bộ gần nhất -->
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-2">Lịch sử đồng bộ gần nhất</h3>
+            <ul id="detail-sync-history"></ul>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+          <button onclick="closeDetailModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Đóng</button>
+          <button id="detail-sync-btn" onclick="syncDetailFp()" type="button"
+            class="px-4 py-2 text-sm font-medium bg-[#21A691] hover:bg-[#1A8A78] text-white rounded-lg transition flex items-center gap-2">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            Đồng bộ ngay
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Toast ===== -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2">
+    <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5 text-[#21A691]"></i>
+    <span id="toast-message" class="text-sm font-medium text-[#060D10]">—</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../assets/js/auth.js"></script>
+  <script src="../../assets/js/data.js"></script>
+  <script src="../../components/sidebar.js"></script>
+  <script src="../../assets/js/pagination.js"></script>
+
+  <script>
+    // 0. Bảo vệ + sidebar
+    checkAuth('leader');
+    renderSidebar('leader');
+
+    // 1. Render header user
+    (function renderHeaderUser() {
+      const user = getCurrentUser();
+      if (!user) return;
+      document.getElementById('header-user').innerHTML = `
+        <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
+        <div class="w-9 h-9 rounded-full bg-[#21A691] text-white font-semibold flex items-center justify-center">
+          ${user.name.charAt(0).toUpperCase()}
+        </div>
+      `;
+      // Bell badge — số cảnh báo chưa xử lý (dynamic từ data.js)
+      const count = CANH_BAO.filter((c) => c.trangThai === 'chua_xu_ly').length;
+      const badge = document.getElementById('bell-badge');
+      if (badge) {
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    })();
+
+    // 2. Helpers Live/Die badge cho BM và VIA
+    function getBmStatus(bm) {
+      if (bm.trangThai === 'active') return { label: 'Live', color: '#21A691' };
+      return { label: 'Die', color: '#EF4444' };
+    }
+    function getViaStatus(via) {
+      if (via.trangThai === 'disabled') return { label: 'Die', color: '#EF4444' };
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const days = Math.ceil((new Date(via.tokenHetHan) - today) / (1000 * 60 * 60 * 24));
+      if (days < 0) return { label: 'Die', color: '#F59E0B' };
+      return { label: 'Live', color: '#21A691' };
+    }
+    const FANPAGE_TKQC = {
+      FP001: ['TKQC_001', 'TKQC_002'],
+      FP002: ['TKQC_001'],
+      FP003: ['TKQC_004'],
+      FP004: ['TKQC_003'],
+      FP005: ['TKQC_005', 'TKQC_006'],
+      FP006: ['TKQC_007'],
+      FP007: ['TKQC_007'],
+      FP008: ['TKQC_008'],
+      FP009: ['TKQC_008']
+    };
+
+    // 3. Helpers chung
+    function refreshIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    }
+    function formatNumber(n) {
+      return Number(n).toLocaleString('vi-VN');
+    }
+    function daysUntil(dateStr) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return Math.ceil((new Date(dateStr) - today) / (1000 * 60 * 60 * 24));
+    }
+    // Map nhanh
+    const khMap = Object.fromEntries(KHACH_HANG.map((k) => [k.id, k.ten]));
+    const bmMap = Object.fromEntries(BM.map((b) => [b.id, b.ten]));
+    // Lookup TKQC theo "tên" (FANPAGE_TKQC dùng dạng "TKQC_001" trùng với field ten)
+    const tkqcByTen = Object.fromEntries(TKQC.map((t) => [t.ten, t]));
+
+    // Badge trạng thái Fanpage (3 trạng thái)
+    function statusBadge(trangThai) {
+      const cfg = {
+        active:     { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động' },
+        restricted: { bg: '#FEF3C7', color: '#F59E0B', label: 'Bị hạn chế' },
+        disabled:   { bg: '#FEE2E2', color: '#EF4444', label: 'Vô hiệu' }
+      }[trangThai] || { bg: '#F1F5F9', color: '#64748B', label: trangThai };
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
+    }
+
+    // 4. Stats mini
+    (function renderStatsMini() {
+      const tong = FANPAGE.length;
+      const active = FANPAGE.filter((f) => f.trangThai === 'active').length;
+      const restricted = FANPAGE.filter((f) => f.trangThai === 'restricted').length;
+
+      const cards = [
+        { num: tong,       label: 'Tổng Fanpage',    icon: 'flag',           color: '#21A691', numColor: '#060D10' },
+        { num: active,     label: 'Đang hoạt động',  icon: 'check-circle-2', color: '#21A691', numColor: '#21A691' },
+        { num: restricted, label: 'Bị hạn chế',      icon: 'alert-triangle', color: '#EF4444', numColor: '#EF4444' }
+      ];
+      document.getElementById('stats-mini').innerHTML = cards.map((c) => `
+        <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${c.color}1A; color: ${c.color};">
+            <i data-lucide="${c.icon}" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" style="color: ${c.numColor};">${c.num}</div>
+            <div class="text-xs text-slate-500">${c.label}</div>
+          </div>
+        </div>
+      `).join('');
+    })();
+
+    // 5. Populate dropdown KH + BM
+    (function populateFilters() {
+      const sel1 = document.getElementById('filter-customer');
+      sel1.innerHTML += KHACH_HANG.map((k) => `<option value="${k.id}">${k.ten}</option>`).join('');
+      const sel2 = document.getElementById('filter-bm');
+      sel2.innerHTML += BM.map((b) => `<option value="${b.id}">${b.ten}</option>`).join('');
+    })();
+
+    // 6. Render bảng Fanpage theo filter + phân trang 10/page
+    const tbody = document.getElementById('fp-tbody');
+    const totalCountEl = document.getElementById('total-count');
+    const searchInput = document.getElementById('search-input');
+    const filterStatus = document.getElementById('filter-status');
+    const filterCustomer = document.getElementById('filter-customer');
+    const filterBM = document.getElementById('filter-bm');
+    const ITEMS_PER_PAGE = 10;
+    let currentPage = 1;
+
+    function renderTable() {
+      const search = searchInput.value.toLowerCase().trim();
+      const status = filterStatus.value;
+      const cust = filterCustomer.value;
+      const bm = filterBM.value;
+
+      const filtered = FANPAGE.filter((f) => {
+        const matchSearch = !search || f.ten.toLowerCase().includes(search);
+        const matchStatus = status === 'all' || f.trangThai === status;
+        const matchCust = cust === 'all' || f.maKH === cust;
+        const matchBM = bm === 'all' || f.maBM === bm;
+        return matchSearch && matchStatus && matchCust && matchBM;
+      });
+
+      const pageInfo = paginate(filtered, currentPage, ITEMS_PER_PAGE);
+      currentPage = pageInfo.currentPage;
+
+      if (pageInfo.total === 0) {
+        tbody.innerHTML = `
+          <tr><td colspan="8" class="text-center py-10 text-slate-400 text-sm">
+            <div class="flex flex-col items-center gap-2">
+              <i data-lucide="search-x" class="w-8 h-8 text-slate-300"></i>
+              Không tìm thấy Fanpage phù hợp
+            </div>
+          </td></tr>`;
+      } else {
+        tbody.innerHTML = pageInfo.items.map((f, idx) => {
+          const tenKH = khMap[f.maKH] || '—';
+          // Row class: highlight đỏ khi đang xử lý cảnh báo
+          const isAlerted = window.__highlightedFp === f.ten;
+          const rowClass = isAlerted ? 'bg-red-50 border-l-4 border-l-red-500' : '';
+          const stt = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+          return `
+            <tr class="${rowClass} hover:bg-[#F0F4F4]" data-fp-row="${f.ten}">
+              <td class="px-4 py-3 text-slate-500">${stt}</td>
+              <td class="px-4 py-3 text-sm font-mono text-slate-500">${f.id}</td>
+              <td class="px-4 py-3 font-medium text-[#060D10]">${f.ten}</td>
+              <td class="px-4 py-3 text-slate-700">${tenKH}</td>
+              <td class="px-4 py-3 text-slate-700">${formatNumber(f.followers)}</td>
+              <td class="px-4 py-3">${statusBadge(f.trangThai)}</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">${f.dongBoLanCuoi}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center justify-end gap-1">
+                  <button onclick="openAssignModal('${f.id}')" type="button" title="Gán khách hàng"
+                    class="p-1.5 rounded text-slate-500 hover:text-[#21A691] hover:bg-slate-100 transition">
+                    <i data-lucide="link" class="w-4 h-4"></i>
+                  </button>
+                  <button onclick="openDetailModal('${f.id}')" type="button" title="Chi tiết"
+                    class="p-1.5 rounded text-slate-500 hover:text-[#21A691] hover:bg-slate-100 transition">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                  </button>
+                  <button data-sync="${f.id}" onclick="syncFp('${f.id}')" type="button" title="Đồng bộ"
+                    class="p-1.5 rounded text-slate-500 hover:text-[#21A691] hover:bg-slate-100 transition">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+      totalCountEl.textContent = `Tổng: ${pageInfo.total} Fanpage`;
+      refreshIcons();
+
+      renderPagination('pagination', pageInfo, (newPage) => {
+        currentPage = newPage;
+        renderTable();
+        const tableSection = tbody.closest('section');
+        if (tableSection) tableSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+
+    searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
+    filterStatus.addEventListener('change', () => { currentPage = 1; renderTable(); });
+    filterCustomer.addEventListener('change', () => { currentPage = 1; renderTable(); });
+    filterBM.addEventListener('change', () => { currentPage = 1; renderTable(); });
+
+    renderTable();
+
+    // 7. Đồng bộ 1 Fanpage
+    function syncFp(fpId) {
+      const btn = document.querySelector(`[data-sync="${fpId}"]`);
+      if (!btn || btn.disabled) return;
+      const orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>';
+      refreshIcons();
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        refreshIcons();
+        showToast(`Đã đồng bộ ${fpId} thành công`);
+      }, 1000);
+    }
+
+    // Đồng bộ tất cả
+    function syncAll() {
+      const btn = document.getElementById('sync-all-btn');
+      const orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang đồng bộ...';
+      refreshIcons();
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        refreshIcons();
+        showToast(`Đã đồng bộ ${FANPAGE.length} Fanpage thành công`);
+      }, 1500);
+    }
+
+    // 8. Toast
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toast-icon');
+      document.getElementById('toast-message').textContent = message;
+      const cfg = {
+        success: { icon: 'check-circle-2', color: '#21A691' },
+        warning: { icon: 'alert-triangle', color: '#F59E0B' },
+        error:   { icon: 'x-circle',       color: '#EF4444' }
+      }[type] || { icon: 'check-circle-2', color: '#21A691' };
+      icon.setAttribute('data-lucide', cfg.icon);
+      icon.style.color = cfg.color;
+      toast.classList.remove('hidden');
+      toast.classList.remove('toast-show');
+      void toast.offsetWidth;
+      toast.classList.add('toast-show');
+      refreshIcons();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // 9. Modal Gán khách hàng
+    let currentFp = null;
+
+    function openAssignModal(fpId) {
+      const f = FANPAGE.find((x) => x.id === fpId);
+      if (!f) return;
+      currentFp = f;
+      document.getElementById('assign-fp-name').textContent = f.ten;
+
+      const emptyState = document.getElementById('assign-empty-state');
+      const currentBlock = document.getElementById('assign-current-block');
+      const warningEl = document.getElementById('assign-warning-current');
+      const sel = document.getElementById('assign-select');
+      const confirmBtn = document.getElementById('assign-confirm-btn');
+
+      const hasKH = f.maKH && khMap[f.maKH];
+
+      if (!hasKH) {
+        // Trường hợp 1: chưa có KH
+        emptyState.classList.remove('hidden');
+        currentBlock.classList.add('hidden');
+        warningEl.classList.add('hidden');
+
+        sel.disabled = false;
+        sel.innerHTML = `<option value="">-- Chọn khách hàng --</option>` +
+          KHACH_HANG.map((k) => `<option value="${k.id}">${k.ten}</option>`).join('');
+
+        confirmBtn.disabled = false;
+      } else {
+        // Trường hợp 2: đã có KH
+        emptyState.classList.add('hidden');
+        currentBlock.classList.remove('hidden');
+        warningEl.classList.remove('hidden');
+
+        document.getElementById('assign-current-name').textContent = khMap[f.maKH];
+        document.getElementById('assign-warning-current-name').textContent = khMap[f.maKH];
+
+        sel.disabled = true;
+        sel.innerHTML = `<option value="">Thu hồi khách hiện tại trước</option>`;
+
+        confirmBtn.disabled = true;
+      }
+
+      document.getElementById('assign-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeAssignModal() {
+      document.getElementById('assign-modal').classList.add('hidden');
+    }
+    function confirmAssign() {
+      if (!currentFp) return;
+      const sel = document.getElementById('assign-select');
+      if (!sel.value) {
+        showToast('Vui lòng chọn khách hàng', 'warning');
+        return;
+      }
+      const newKhId = sel.value;
+      const newKhName = khMap[newKhId];
+
+      // Cập nhật data: FANPAGE.maKH + KHACH_HANG.soFanpage
+      currentFp.maKH = newKhId;
+      const newKh = KHACH_HANG.find((k) => k.id === newKhId);
+      if (newKh) newKh.soFanpage = (newKh.soFanpage || 0) + 1;
+
+      // Re-render bảng / cards Fanpage
+      renderCurrentView();
+      closeAssignModal();
+      showToast(`Đã gán ${currentFp.ten} cho ${newKhName}`);
+    }
+
+    // 9b. Modal Thu hồi (confirm dialog với checkbox BR-06)
+    function openRevokeModal() {
+      if (!currentFp) return;
+      document.getElementById('assign-modal').classList.add('hidden');
+      document.getElementById('revoke-modal').classList.remove('hidden');
+      document.getElementById('revoke-fp-name').textContent = currentFp.ten;
+      document.getElementById('revoke-fp-name-2').textContent = currentFp.ten;
+      const khName = khMap[currentFp.maKH] || '—';
+      document.getElementById('revoke-current-name').textContent = khName;
+      document.getElementById('revoke-current-name-2').textContent = khName;
+      // Reset checkbox + button
+      document.getElementById('revoke-confirm').checked = false;
+      toggleRevokeBtn();
+      refreshIcons();
+    }
+    function closeRevokeModal() {
+      document.getElementById('revoke-modal').classList.add('hidden');
+    }
+    function toggleRevokeBtn() {
+      const checked = document.getElementById('revoke-confirm').checked;
+      const btn = document.getElementById('revoke-btn');
+      btn.disabled = !checked;
+      btn.classList.toggle('opacity-50', !checked);
+      btn.classList.toggle('cursor-not-allowed', !checked);
+    }
+    function confirmRevoke() {
+      if (!currentFp) return;
+      const ten = currentFp.ten;
+      const oldKhId = currentFp.maKH;
+      const oldKhName = khMap[oldKhId] || '—';
+
+      // Cập nhật data: FANPAGE.maKH = null + KHACH_HANG.soFanpage -= 1
+      currentFp.maKH = null;
+      const oldKh = KHACH_HANG.find((k) => k.id === oldKhId);
+      if (oldKh && oldKh.soFanpage > 0) oldKh.soFanpage -= 1;
+
+      closeRevokeModal();
+      // Re-render bảng + Re-open assign modal trong Case 1
+      renderCurrentView();
+      openAssignModal(currentFp.id);
+      showToast(`Đã thu hồi ${ten} khỏi ${oldKhName}`);
+    }
+
+    // 10. Modal Chi tiết Fanpage
+    function openDetailModal(fpId) {
+      const f = FANPAGE.find((x) => x.id === fpId);
+      if (!f) return;
+      currentFp = f;
+
+      document.getElementById('detail-title').textContent = f.ten;
+      document.getElementById('detail-status-badge').innerHTML = statusBadge(f.trangThai);
+
+      // 4 ô thông tin
+      const info = [
+        { label: 'Khách hàng',         value: khMap[f.maKH] || '—' },
+        { label: 'BM chứa',            value: bmMap[f.maBM] || '—' },
+        { label: 'Followers',          value: formatNumber(f.followers) },
+        { label: 'Đồng bộ lần cuối',   value: f.dongBoLanCuoi }
+      ];
+      document.getElementById('detail-info').innerHTML = info.map((it) => `
+        <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">
+          <div class="text-xs text-slate-500 mb-1">${it.label}</div>
+          <div class="text-sm font-semibold text-[#060D10]">${it.value}</div>
+        </div>
+      `).join('');
+
+      // Thông tin VIA/BM (2 list)
+      renderDetailBMs(f.id);
+      renderDetailVIAs(f.id);
+      // Lịch sử đồng bộ gần nhất
+      renderSyncHistory(f.id);
+
+      document.getElementById('detail-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+    }
+    // Render list BM chứa Fanpage này (Phần 1)
+    function renderDetailBMs(fpId) {
+      const list = document.getElementById('detail-bm-list');
+      const bmIds = BM_FANPAGE.filter((r) => r.maFP === fpId).map((r) => r.maBM);
+      const bms = bmIds.map((id) => BM.find((b) => b.id === id)).filter(Boolean);
+      if (bms.length === 0) {
+        list.innerHTML = '<li class="text-sm text-slate-400 italic">Chưa thuộc BM nào</li>';
+        return;
+      }
+      list.innerHTML = bms.map((b, idx) => {
+        const st = getBmStatus(b);
+        return `
+          <li class="flex items-center justify-between gap-3 text-sm">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: ${st.color};"></span>
+              <span class="truncate">
+                ${idx + 1}. <span class="font-medium text-slate-700">${b.ten}</span>
+                <span class="text-xs font-mono text-slate-400 ml-1">${b.id}</span>
+              </span>
+            </div>
+            <span class="font-medium flex-shrink-0" style="color: ${st.color};">${st.label}</span>
+          </li>
+        `;
+      }).join('');
+    }
+    // Render list VIA cầm quyền (Phần 2)
+    function renderDetailVIAs(fpId) {
+      const list = document.getElementById('detail-via-list');
+      const viaIds = VIA_FANPAGE.filter((r) => r.maFP === fpId).map((r) => r.maVIA);
+      const vias = viaIds.map((id) => VIA.find((v) => v.id === id)).filter(Boolean);
+      if (vias.length === 0) {
+        list.innerHTML = '<li class="text-sm text-slate-400 italic">Chưa có VIA nào cầm quyền</li>';
+        return;
+      }
+      list.innerHTML = vias.map((v, idx) => {
+        const st = getViaStatus(v);
+        return `
+          <li class="flex items-center justify-between gap-3 text-sm">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="w-2 h-2 rounded-full flex-shrink-0" style="background-color: ${st.color};"></span>
+              <span class="text-slate-700 truncate">
+                ${idx + 1}. ${v.ten}
+                <span class="text-xs text-slate-400 font-mono ml-1">${v.fbUserId}</span>
+              </span>
+            </div>
+            <span class="font-medium flex-shrink-0" style="color: ${st.color};">${st.label}</span>
+          </li>
+        `;
+      }).join('');
+    }
+    // Format datetime "2026-05-10 09:15:00" → "10/05/2026 09:15:00"
+    function formatDateTime(dt) {
+      if (!dt) return '—';
+      const [datePart, timePart] = dt.split(' ');
+      const [y, m, d] = datePart.split('-');
+      return `${d}/${m}/${y}${timePart ? ' ' + timePart : ''}`;
+    }
+
+    // Render lịch sử đồng bộ gần nhất (tối đa 10 bản ghi, mới nhất trên)
+    function renderSyncHistory(fpId) {
+      const container = document.getElementById('detail-sync-history');
+      const items = LICH_SU_DONG_BO_FANPAGE
+        .filter((r) => r.maFanpage === fpId)
+        .sort((a, b) => b.thoiGian.localeCompare(a.thoiGian))
+        .slice(0, 10);
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <li class="flex flex-col items-center justify-center py-6 text-slate-400 text-sm">
+            <i data-lucide="refresh-cw" class="w-8 h-8 text-slate-300 mb-2"></i>
+            <span>Chưa có lịch sử đồng bộ</span>
+          </li>`;
+        return;
+      }
+
+      // Chỉ 2 trạng thái: success / error
+      const ICON_BY_KQ = {
+        success: { icon: 'check-circle', color: '#21A691' },
+        error:   { icon: 'x-circle',     color: '#EF4444' }
+      };
+
+      container.innerHTML = items.map((it, idx) => {
+        const cfg = ICON_BY_KQ[it.ketQua] || ICON_BY_KQ.success;
+        const isLast = idx === items.length - 1;
+        return `
+          <li class="flex items-start gap-3 py-2.5 ${isLast ? '' : 'border-b border-slate-100'}">
+            <i data-lucide="${cfg.icon}" class="w-4 h-4 flex-shrink-0 mt-0.5" style="color: ${cfg.color};"></i>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-medium text-slate-700">${formatDateTime(it.thoiGian)}</div>
+              <div class="text-sm text-slate-500 mt-0.5">${it.ghiChu}</div>
+            </div>
+          </li>
+        `;
+      }).join('');
+    }
+    function syncDetailFp() {
+      if (!currentFp) return;
+      const btn = document.getElementById('detail-sync-btn');
+      const orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang đồng bộ...';
+      refreshIcons();
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        refreshIcons();
+        // Đóng modal + xóa highlight + clear URL params
+        closeDetailModal();
+        clearAlertHighlight();
+        showToast(`Đồng bộ thành công — tài sản đã được cập nhật`);
+      }, 1500);
+    }
+
+    // 11. Xử lý URL params từ dashboard (canhbao + taiSan)
+    (function handleAlertParams() {
+      const params = new URLSearchParams(window.location.search);
+      const cbId = params.get('canhbao');
+      const taiSan = params.get('taiSan');
+      if (!taiSan) return;
+
+      // Hiện banner cảnh báo
+      const cb = CANH_BAO.find((c) => c.id === cbId);
+      const banner = document.getElementById('alert-banner');
+      document.getElementById('alert-banner-loai').textContent = cb ? cb.loai : 'Cần xử lý';
+      document.getElementById('alert-banner-asset').textContent = taiSan;
+      banner.classList.remove('hidden');
+
+      // Highlight + scroll đến row Fanpage tương ứng
+      window.__highlightedFp = taiSan;
+      renderTable();
+      setTimeout(() => {
+        const row = document.querySelector(`[data-fp-row="${taiSan}"]`);
+        if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 200);
+
+      // Tự mở modal chi tiết Fanpage tương ứng (nếu tìm thấy)
+      const f = FANPAGE.find((x) => x.ten === taiSan);
+      if (f) {
+        setTimeout(() => {
+          openDetailModal(f.id);
+          const detailBanner = document.getElementById('detail-alert-banner');
+          if (detailBanner) {
+            document.getElementById('detail-alert-loai').textContent = cb ? cb.loai : 'Cần xử lý';
+            detailBanner.classList.remove('hidden');
+            refreshIcons();
+          }
+        }, 400);
+      }
+    })();
+
+    function clearAlertHighlight() {
+      const banner = document.getElementById('alert-banner');
+      if (banner) banner.classList.add('hidden');
+      const detailBanner = document.getElementById('detail-alert-banner');
+      if (detailBanner) detailBanner.classList.add('hidden');
+      window.__highlightedFp = null;
+      renderTable();
+      const url = new URL(window.location);
+      url.searchParams.delete('canhbao');
+      url.searchParams.delete('taiSan');
+      url.searchParams.delete('action');
+      window.history.replaceState({}, '', url);
+    }
+
+    // 12. Đóng modal khi click overlay hoặc nhấn ESC
+    ['assign-modal', 'revoke-modal', 'detail-modal'].forEach((id) => {
+      const overlay = document.getElementById(id).querySelector('.fixed');
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          if (id === 'assign-modal') closeAssignModal();
+          else if (id === 'revoke-modal') closeRevokeModal();
+          else closeDetailModal();
+        }
+      });
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAssignModal();
+        closeRevokeModal();
+        closeDetailModal();
+      }
+    });
+  </script>
+</body>
+</html>

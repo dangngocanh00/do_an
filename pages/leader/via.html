@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý VIA — Leader | TN Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
+    /* Hover row mượt */
+    table tbody tr { transition: background-color 0.15s ease; }
+    /* Animation modal mở */
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-panel { animation: modalIn 180ms ease-out; }
+    /* Animation toast trượt lên */
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .toast-show { animation: toastIn 220ms ease-out; }
+  </style>
+</head>
+<body class="bg-[#F0F4F4]">
+  <!-- Sidebar -->
+  <div id="sidebar"></div>
+
+  <!-- Header dùng chung -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+    <div class="flex items-center gap-2">
+      <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" class="relative p-2 rounded-full hover:bg-slate-100 transition" aria-label="Thông báo">
+        <i data-lucide="bell" class="w-5 h-5 text-slate-600" stroke-width="1.5"></i>
+        <span id="bell-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#EF4444] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">0</span>
+      </button>
+      <div id="header-user" class="flex items-center gap-2 px-2"></div>
+      <button onclick="logout()" type="button"
+        class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+    <div class="max-w-screen-xl mx-auto px-6 py-6">
+
+      <!-- 1. Page header: tiêu đề + nút action -->
+      <div class="flex items-start justify-between mb-6 gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-[#060D10]">Quản lý VIA</h1>
+          <p class="text-sm text-[#64748B] mt-1">Danh sách tài khoản VIA đang hoạt động trong hệ thống</p>
+        </div>
+        <button onclick="openLoginModal()" type="button"
+          class="bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm flex-shrink-0">
+          <i data-lucide="plus" class="w-4 h-4" stroke-width="2"></i>
+          Đăng nhập VIA mới
+        </button>
+      </div>
+
+      <!-- 2. Toolbar: search + filter + count -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex flex-wrap items-center gap-3">
+        <!-- Ô tìm kiếm -->
+        <div class="relative flex-1 min-w-[240px] max-w-md">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+          <input id="search-input" type="text"
+            placeholder="Tìm theo tên VIA, UID VIA..."
+            class="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition" />
+        </div>
+        <!-- Lọc trạng thái -->
+        <select id="filter-status"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả trạng thái</option>
+          <option value="active">Hoạt động</option>
+          <option value="disabled">Vô hiệu hóa</option>
+        </select>
+        <!-- Tổng số -->
+        <div id="total-count" class="ml-auto text-sm text-slate-600 font-medium">Tổng: 0 VIA</div>
+      </div>
+
+      <!-- Banner cảnh báo (hiện khi navigate từ dashboard với canhbao param) -->
+      <div id="alert-banner" class="hidden mb-4 rounded-xl p-3 border" style="background-color: #FEF2F2; border-color: #EF4444;">
+        <div class="flex items-start gap-2">
+          <i data-lucide="alert-triangle" class="w-5 h-5 text-[#EF4444] flex-shrink-0 mt-0.5"></i>
+          <div class="flex-1 min-w-0">
+            <p class="text-sm font-medium text-red-900">⚠️ Đang xử lý cảnh báo: <span id="alert-banner-loai">—</span></p>
+            <p class="text-xs text-red-700 mt-0.5">Tài sản liên quan: <span id="alert-banner-asset" class="font-mono font-medium">—</span></p>
+          </div>
+          <button onclick="clearAlertHighlight()" type="button" class="text-red-600 hover:bg-red-100 p-1 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Bảng VIA -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-[#F8FAFB] text-slate-600">
+              <tr>
+                <th class="text-left font-medium px-4 py-3 w-12">STT</th>
+                <th class="text-left font-medium px-4 py-3">Tên VIA</th>
+                <th class="text-left font-medium px-4 py-3">UID VIA</th>
+                <th class="text-left font-medium px-4 py-3">Token hết hạn</th>
+                <th class="text-left font-medium px-4 py-3">Số tài sản</th>
+                <th class="text-left font-medium px-4 py-3">Ngày thêm vào hệ thống</th>
+                <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                <th class="text-left font-medium px-4 py-3">Đồng bộ lần cuối</th>
+                <th class="text-right font-medium px-4 py-3">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="via-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <div id="pagination"></div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ===== Modal: Đăng nhập VIA mới ===== -->
+  <div id="login-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg modal-panel">
+        <!-- Header modal -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 class="text-lg font-semibold text-[#060D10]">Đăng nhập VIA vào hệ thống</h2>
+          <button onclick="closeLoginModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <!-- Tabs -->
+        <div class="px-6 pt-3 border-b border-slate-200">
+          <div class="flex gap-1">
+            <button onclick="switchLoginTab('direct')" id="tab-btn-direct" type="button"
+              class="px-3 py-2.5 border-b-2 border-[#21A691] text-[#21A691] font-medium text-sm transition">
+              OAuth trực tiếp
+            </button>
+            <button onclick="switchLoginTab('remote')" id="tab-btn-remote" type="button"
+              class="px-3 py-2.5 border-b-2 border-transparent text-slate-600 hover:text-slate-800 font-medium text-sm transition">
+              OAuth từ xa
+            </button>
+          </div>
+        </div>
+        <!-- Nội dung tab -->
+        <div class="p-6">
+          <!-- Tab: OAuth trực tiếp -->
+          <div id="tab-content-direct">
+            <p class="text-sm text-slate-600 mb-4">Click nút bên dưới để đăng nhập Facebook trực tiếp.</p>
+            <button type="button"
+              class="w-full bg-[#1877F2] hover:bg-[#0E63D6] text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-2 transition shadow-sm">
+              <i data-lucide="facebook" class="w-5 h-5"></i>
+              Đăng nhập bằng Facebook
+            </button>
+          </div>
+          <!-- Tab: OAuth từ xa -->
+          <div id="tab-content-remote" class="hidden">
+            <p class="text-sm text-slate-600 mb-4">Sinh authorization URL, paste vào trình duyệt đang đăng nhập VIA cần thêm.</p>
+            <button onclick="generateOAuthUrl()" type="button"
+              class="w-full bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium py-2.5 rounded-lg flex items-center justify-center gap-2 transition shadow-sm mb-3">
+              <i data-lucide="link-2" class="w-5 h-5"></i>
+              Sinh OAuth URL
+            </button>
+            <!-- URL hiển thị + nút Copy -->
+            <div id="oauth-url-block" class="hidden mb-3">
+              <div class="flex gap-2">
+                <input id="oauth-url" type="text" readonly value=""
+                  class="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-xs font-mono bg-slate-50 text-slate-700" />
+                <button onclick="copyOAuthUrl()" type="button"
+                  class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm flex items-center gap-1 transition">
+                  <i data-lucide="copy" class="w-4 h-4"></i>
+                  Copy
+                </button>
+              </div>
+            </div>
+            <!-- Hướng dẫn -->
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <p class="text-xs font-medium text-slate-700 mb-1.5">Hướng dẫn:</p>
+              <ol class="text-xs text-slate-600 space-y-1 list-decimal pl-4">
+                <li>Click "Sinh OAuth URL" để lấy đường link.</li>
+                <li>Copy và paste vào trình duyệt đang đăng nhập VIA cần thêm.</li>
+                <li>Hệ thống sẽ tự đồng bộ token trong vòng 30 giây.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Chi tiết VIA ===== -->
+  <div id="detail-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl modal-panel max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div class="flex items-center gap-3">
+            <h2 id="detail-title" class="text-lg font-semibold text-[#060D10]">—</h2>
+            <span id="detail-status-badge"></span>
+          </div>
+          <button onclick="closeDetailModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <!-- Body có thể cuộn -->
+        <div class="p-6 overflow-y-auto flex-1">
+          <!-- Thông tin cơ bản -->
+          <div id="detail-info" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5"></div>
+
+          <!-- Tabs tài sản -->
+          <div class="border-b border-slate-200 mb-3">
+            <div class="flex gap-1">
+              <button onclick="switchAssetTab('tkqc')" data-asset-tab="tkqc" type="button"
+                class="px-3 py-2 border-b-2 border-[#21A691] text-[#21A691] font-medium text-sm transition">
+                TKQC
+              </button>
+              <button onclick="switchAssetTab('fanpage')" data-asset-tab="fanpage" type="button"
+                class="px-3 py-2 border-b-2 border-transparent text-slate-600 hover:text-slate-800 font-medium text-sm transition">
+                Fanpage
+              </button>
+              <button onclick="switchAssetTab('bm')" data-asset-tab="bm" type="button"
+                class="px-3 py-2 border-b-2 border-transparent text-slate-600 hover:text-slate-800 font-medium text-sm transition">
+                BM
+              </button>
+            </div>
+          </div>
+          <div id="detail-asset-content"></div>
+        </div>
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+          <button onclick="closeDetailModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">
+            Đóng
+          </button>
+          <button id="detail-sync-btn" onclick="syncDetailVia()" type="button"
+            class="px-4 py-2 text-sm font-medium bg-[#21A691] hover:bg-[#1A8A78] text-white rounded-lg transition flex items-center gap-2">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            Đồng bộ ngay
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Lấy lại token (gia hạn) ===== -->
+  <div id="refresh-token-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl modal-panel">
+        <!-- Header -->
+        <div class="flex items-start justify-between px-6 py-4 border-b border-slate-200">
+          <div>
+            <h2 class="text-lg font-semibold text-[#060D10]">Gia hạn token — <span id="refresh-via-name">—</span></h2>
+            <p class="text-xs text-slate-500 mt-0.5">Chọn phương thức để lấy token mới</p>
+          </div>
+          <button onclick="closeRefreshTokenModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <!-- 2 phương thức dạng card -->
+        <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Card 1: OAuth trực tiếp -->
+          <div class="border border-slate-200 rounded-lg p-4 flex flex-col">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style="background-color: #1877F21A; color: #1877F2;">
+              <i data-lucide="monitor" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-semibold text-[#060D10] mb-1">Đăng nhập trực tiếp</h3>
+            <p class="text-xs text-slate-500 mb-4 flex-1">VIA đang đăng nhập trên trình duyệt này</p>
+            <button id="refresh-direct-btn" onclick="refreshTokenDirect()" type="button"
+              class="w-full bg-[#1877F2] hover:bg-[#0E63D6] text-white font-medium py-2 rounded-lg flex items-center justify-center gap-2 transition shadow-sm">
+              <i data-lucide="facebook" class="w-4 h-4"></i>
+              Đăng nhập bằng Facebook
+            </button>
+          </div>
+          <!-- Card 2: OAuth từ xa -->
+          <div class="border border-slate-200 rounded-lg p-4 flex flex-col">
+            <div class="w-10 h-10 rounded-lg flex items-center justify-center mb-3" style="background-color: #21A6911A; color: #21A691;">
+              <i data-lucide="link" class="w-5 h-5"></i>
+            </div>
+            <h3 class="font-semibold text-[#060D10] mb-1">Đăng nhập từ xa</h3>
+            <p class="text-xs text-slate-500 mb-4">VIA đang chạy trên Adspower hoặc browser profile khác</p>
+            <button onclick="generateRemoteUrl()" type="button"
+              class="w-full bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium py-2 rounded-lg flex items-center justify-center gap-2 transition shadow-sm">
+              <i data-lucide="link-2" class="w-4 h-4"></i>
+              Sinh OAuth URL
+            </button>
+            <!-- URL block (ẩn ban đầu) -->
+            <div id="remote-url-block" class="hidden mt-3">
+              <div class="flex gap-2 mb-2">
+                <input id="remote-url" type="text" readonly value=""
+                  class="flex-1 px-2 py-1 text-[11px] font-mono bg-slate-50 border border-slate-200 rounded text-slate-700" />
+                <button onclick="copyRemoteUrl()" type="button"
+                  class="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded text-xs flex items-center gap-1 transition">
+                  <i data-lucide="copy" class="w-3 h-3"></i>
+                  Copy
+                </button>
+              </div>
+              <div class="bg-slate-50 border border-slate-200 rounded p-2 mb-2">
+                <p class="text-[11px] font-medium text-slate-700 mb-1">Hướng dẫn:</p>
+                <ol class="text-[11px] text-slate-600 space-y-0.5 list-decimal pl-4">
+                  <li>Copy URL trên</li>
+                  <li>Paste vào trình duyệt đang đăng nhập VIA đó</li>
+                  <li>Sau khi Facebook xác nhận, token sẽ tự cập nhật</li>
+                </ol>
+              </div>
+              <button onclick="confirmRemoteSuccess()" type="button"
+                class="w-full text-xs font-medium bg-[#21A691]/10 text-[#21A691] hover:bg-[#21A691]/20 py-1.5 rounded transition flex items-center justify-center gap-1">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                Tôi đã xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+        <!-- Footer -->
+        <div class="flex items-center justify-end px-6 py-4 border-t border-slate-200">
+          <button onclick="closeRefreshTokenModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Toast notification ===== -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2 toast-show">
+    <i data-lucide="check-circle-2" class="w-5 h-5 text-[#21A691]"></i>
+    <span id="toast-message" class="text-sm font-medium text-[#060D10]">Đã đồng bộ thành công</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../assets/js/auth.js"></script>
+  <script src="../../assets/js/data.js"></script>
+  <script src="../../components/sidebar.js"></script>
+  <script src="../../assets/js/pagination.js"></script>
+
+  <script>
+    // 0. Bảo vệ + render sidebar
+    checkAuth('leader');
+    renderSidebar('leader');
+
+    // 1. Render tên + avatar user trên header
+    (function renderHeaderUser() {
+      const user = getCurrentUser();
+      if (!user) return;
+      document.getElementById('header-user').innerHTML = `
+        <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
+        <div class="w-9 h-9 rounded-full bg-[#21A691] text-white font-semibold flex items-center justify-center">
+          ${user.name.charAt(0).toUpperCase()}
+        </div>
+      `;
+      // Bell badge — số cảnh báo chưa xử lý (dynamic từ data.js)
+      const count = CANH_BAO.filter((c) => c.trangThai === 'chua_xu_ly').length;
+      const badge = document.getElementById('bell-badge');
+      if (badge) {
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    })();
+
+    // 2. Mock dữ liệu phụ — không có trong data.js gốc
+    const LAST_SYNC = {
+      VIA001: '5 phút trước',
+      VIA002: '1 giờ trước',
+      VIA003: '2 ngày trước',
+      VIA004: 'Vừa xong',
+      VIA005: '20 phút trước'
+    };
+    const LOGIN_DATE = {
+      VIA001: '2026-03-12',
+      VIA002: '2026-04-01',
+      VIA003: '2025-11-20',
+      VIA004: '2026-04-15',
+      VIA005: '2026-02-08'
+    };
+    // Tài sản mỗi VIA đang cầm quyền (mock cho demo modal chi tiết)
+    const VIA_ASSETS = {
+      VIA001: { tkqc: ['TKQC_001', 'TKQC_005', 'TKQC_007'], fanpage: ['Page_ABC', 'Page_XYZ'], bm: ['BM_main'] },
+      VIA002: { tkqc: ['TKQC_002', 'TKQC_004'], fanpage: ['Page_DEF'], bm: ['BM_main'] },
+      VIA003: { tkqc: ['TKQC_006'], fanpage: ['Page_GHI'], bm: [] },
+      VIA004: { tkqc: ['TKQC_003', 'TKQC_007'], fanpage: ['Page_JKL', 'Page_MNO'], bm: ['BM_secondary'] },
+      VIA005: { tkqc: ['TKQC_008'], fanpage: ['Page_PQR'], bm: ['BM_main'] }
+    };
+
+    // 3. Helper — gọi lại Lucide sau khi inject HTML mới
+    function refreshIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') {
+        lucide.createIcons();
+      }
+    }
+
+    // 4. Số ngày tới date — dùng để tô màu token
+    function daysUntil(dateStr) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const target = new Date(dateStr);
+      const diffMs = target - today;
+      return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    }
+
+    // Format "2026-04-01 09:00" → "01/04/2026 09:00"
+    function formatNgayThem(dt) {
+      if (!dt) return '—';
+      const [datePart, timePart] = dt.split(' ');
+      const [y, m, d] = datePart.split('-');
+      return `${d}/${m}/${y}${timePart ? ' ' + timePart : ''}`;
+    }
+
+    // 5. Render badge trạng thái VIA
+    function statusBadge(trangThai) {
+      if (trangThai === 'active') {
+        return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>`;
+      }
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu hóa</span>`;
+    }
+
+    // 6. Format ngày + class màu cho cột Token
+    function tokenCell(dateStr) {
+      const days = daysUntil(dateStr);
+      let colorCls = 'text-slate-600';
+      let suffix = '';
+      if (days < 0) {
+        colorCls = 'text-[#EF4444] font-semibold';
+        suffix = ' (đã hết hạn)';
+      } else if (days < 7) {
+        colorCls = 'text-[#EF4444] font-semibold';
+        suffix = ` (còn ${days} ngày)`;
+      } else if (days < 30) {
+        colorCls = 'text-[#F59E0B] font-semibold';
+        suffix = ` (còn ${days} ngày)`;
+      }
+      return `<span class="${colorCls}">${dateStr}${suffix}</span>`;
+    }
+
+    // 7. Render bảng VIA — áp dụng filter + phân trang 10 item/page
+    const tbody = document.getElementById('via-tbody');
+    const totalCountEl = document.getElementById('total-count');
+    const searchInput = document.getElementById('search-input');
+    const filterStatus = document.getElementById('filter-status');
+    const ITEMS_PER_PAGE = 10;
+    let currentPage = 1;
+
+    function renderTable() {
+      const search = searchInput.value.toLowerCase().trim();
+      const status = filterStatus.value;
+
+      const filtered = VIA.filter((v) => {
+        const matchSearch = !search
+          || v.ten.toLowerCase().includes(search)
+          || v.fbUserId.toLowerCase().includes(search);
+        const matchStatus = status === 'all' || v.trangThai === status;
+        return matchSearch && matchStatus;
+      });
+
+      // Pagination — slice trang hiện tại
+      const pageInfo = paginate(filtered, currentPage, ITEMS_PER_PAGE);
+      currentPage = pageInfo.currentPage;
+
+      if (pageInfo.total === 0) {
+        tbody.innerHTML = `
+          <tr><td colspan="9" class="text-center py-10 text-slate-400 text-sm">
+            <div class="flex flex-col items-center gap-2">
+              <i data-lucide="search-x" class="w-8 h-8 text-slate-300"></i>
+              Không tìm thấy VIA phù hợp
+            </div>
+          </td></tr>`;
+      } else {
+        tbody.innerHTML = pageInfo.items.map((v, idx) => {
+          const days = daysUntil(v.tokenHetHan);
+          // Row class: ưu tiên highlight cảnh báo (đỏ) > token sắp hết (vàng) > bình thường
+          const isAlerted = window.__highlightedVia === v.ten;
+          let rowClass = '';
+          if (isAlerted) rowClass = 'bg-red-50 border-l-4 border-l-red-500';
+          else if (days < 7) rowClass = 'bg-[#FEF9C3]';
+          // STT tính theo offset toàn bộ filtered (không reset mỗi trang)
+          const stt = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+          return `
+            <tr class="${rowClass} hover:bg-[#F0F4F4]" data-via-row="${v.ten}">
+              <td class="px-4 py-3 text-slate-500">${stt}</td>
+              <td class="px-4 py-3 font-medium text-[#060D10]">${v.ten}</td>
+              <td class="px-4 py-3 text-slate-600 font-mono text-xs">${v.fbUserId}</td>
+              <td class="px-4 py-3">${tokenCell(v.tokenHetHan)}</td>
+              <td class="px-4 py-3 text-slate-700">${v.soTaiSan}</td>
+              <td class="px-4 py-3 text-sm text-slate-600">${formatNgayThem(v.ngayThem)}</td>
+              <td class="px-4 py-3">${statusBadge(v.trangThai)}</td>
+              <td class="px-4 py-3 text-slate-500 text-xs">${LAST_SYNC[v.id] || '—'}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center justify-end gap-1">
+                  <button onclick="openRefreshTokenModal('${v.id}')" type="button" title="Lấy lại token"
+                    class="p-1.5 rounded text-slate-500 hover:text-[#EF4444] hover:bg-slate-100 transition">
+                    <i data-lucide="key-round" class="w-4 h-4"></i>
+                  </button>
+                  <button onclick="openDetailModal('${v.id}')" type="button" title="Chi tiết"
+                    class="p-1.5 rounded text-slate-500 hover:text-[#21A691] hover:bg-slate-100 transition">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                  </button>
+                  <button data-sync="${v.id}" onclick="syncVia('${v.id}')" type="button" title="Đồng bộ"
+                    class="p-1.5 rounded text-slate-500 hover:text-[#21A691] hover:bg-slate-100 transition">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      totalCountEl.textContent = `Tổng: ${pageInfo.total} VIA`;
+      refreshIcons();
+
+      // Render pagination — click → đổi trang + scroll lên đầu bảng
+      renderPagination('pagination', pageInfo, (newPage) => {
+        currentPage = newPage;
+        renderTable();
+        const tableSection = tbody.closest('section');
+        if (tableSection) tableSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+
+    // Listener filter real-time — reset trang khi filter đổi
+    searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
+    filterStatus.addEventListener('change', () => { currentPage = 1; renderTable(); });
+
+    // Render lần đầu
+    renderTable();
+
+    // 8. Đồng bộ VIA — loading 1s rồi toast
+    function syncVia(viaId) {
+      const btn = document.querySelector(`[data-sync="${viaId}"]`);
+      if (!btn || btn.disabled) return;
+      const originalHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>';
+      refreshIcons();
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        refreshIcons();
+        showToast(`Đã đồng bộ ${viaId} thành công`);
+      }, 1000);
+    }
+
+    // 9. Toast notification
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-message').textContent = message;
+      toast.classList.remove('hidden');
+      // Reset animation bằng cách remove + add lại class
+      toast.classList.remove('toast-show');
+      void toast.offsetWidth;
+      toast.classList.add('toast-show');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // 10. Modal đăng nhập VIA mới
+    function openLoginModal() {
+      document.getElementById('login-modal').classList.remove('hidden');
+      // Reset về tab mặc định
+      switchLoginTab('direct');
+      document.getElementById('oauth-url-block').classList.add('hidden');
+      refreshIcons();
+    }
+    function closeLoginModal() {
+      document.getElementById('login-modal').classList.add('hidden');
+    }
+    function switchLoginTab(tab) {
+      ['direct', 'remote'].forEach((t) => {
+        const btn = document.getElementById('tab-btn-' + t);
+        const content = document.getElementById('tab-content-' + t);
+        const isActive = t === tab;
+        btn.classList.toggle('border-[#21A691]', isActive);
+        btn.classList.toggle('text-[#21A691]', isActive);
+        btn.classList.toggle('border-transparent', !isActive);
+        btn.classList.toggle('text-slate-600', !isActive);
+        content.classList.toggle('hidden', !isActive);
+      });
+    }
+    function generateOAuthUrl() {
+      // URL mẫu cho mockup
+      const url = 'https://facebook.com/oauth/authorize?client_id=987654321&redirect_uri=https://tnmanager.app/oauth/callback&scope=ads_management,business_management,pages_show_list&state=' + Math.random().toString(36).slice(2, 10);
+      const block = document.getElementById('oauth-url-block');
+      document.getElementById('oauth-url').value = url;
+      block.classList.remove('hidden');
+    }
+    function copyOAuthUrl() {
+      const input = document.getElementById('oauth-url');
+      const fallback = () => { input.select(); document.execCommand('copy'); };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(input.value).then(
+          () => showToast('Đã sao chép URL'),
+          fallback
+        );
+      } else {
+        fallback();
+        showToast('Đã sao chép URL');
+      }
+    }
+
+    // 11. Modal chi tiết VIA
+    let currentDetailVia = null;
+
+    function openDetailModal(viaId) {
+      const via = VIA.find((v) => v.id === viaId);
+      if (!via) return;
+      currentDetailVia = via;
+
+      // Tiêu đề + badge
+      document.getElementById('detail-title').textContent = via.ten;
+      document.getElementById('detail-status-badge').innerHTML = statusBadge(via.trangThai);
+
+      // Khối thông tin (3 cột)
+      const info = [
+        { label: 'Facebook ID', value: via.fbUserId },
+        { label: 'Token hết hạn', value: tokenCell(via.tokenHetHan) },
+        { label: 'Ngày đăng nhập', value: LOGIN_DATE[via.id] || '—' }
+      ];
+      document.getElementById('detail-info').innerHTML = info.map((it) => `
+        <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">
+          <div class="text-xs text-slate-500 mb-1">${it.label}</div>
+          <div class="text-sm font-medium text-[#060D10]">${it.value}</div>
+        </div>
+      `).join('');
+
+      // Tab tài sản — mặc định mở TKQC
+      switchAssetTab('tkqc');
+
+      document.getElementById('detail-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+      currentDetailVia = null;
+    }
+    function switchAssetTab(type) {
+      ['tkqc', 'fanpage', 'bm'].forEach((t) => {
+        const btn = document.querySelector(`[data-asset-tab="${t}"]`);
+        const isActive = t === type;
+        btn.classList.toggle('border-[#21A691]', isActive);
+        btn.classList.toggle('text-[#21A691]', isActive);
+        btn.classList.toggle('border-transparent', !isActive);
+        btn.classList.toggle('text-slate-600', !isActive);
+      });
+      renderAssetTab(type);
+    }
+    function renderAssetTab(type) {
+      const container = document.getElementById('detail-asset-content');
+      if (!currentDetailVia) { container.innerHTML = ''; return; }
+      const assets = (VIA_ASSETS[currentDetailVia.id] || {})[type] || [];
+      const typeLabel = { tkqc: 'TKQC', fanpage: 'Fanpage', bm: 'BM' }[type];
+
+      if (assets.length === 0) {
+        container.innerHTML = `<p class="text-sm text-slate-400 text-center py-6">Chưa có ${typeLabel} nào</p>`;
+        return;
+      }
+      container.innerHTML = `
+        <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+          <thead class="bg-[#F8FAFB] text-slate-600">
+            <tr>
+              <th class="text-left font-medium px-4 py-2">Tên ${typeLabel}</th>
+              <th class="text-left font-medium px-4 py-2">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${assets.map((name) => `
+              <tr class="hover:bg-[#F0F4F4]">
+                <td class="px-4 py-2 font-medium text-[#060D10]">${name}</td>
+                <td class="px-4 py-2">
+                  <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    // Đồng bộ trong modal chi tiết
+    function syncDetailVia() {
+      if (!currentDetailVia) return;
+      const btn = document.getElementById('detail-sync-btn');
+      const originalHTML = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang đồng bộ...';
+      refreshIcons();
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = originalHTML;
+        refreshIcons();
+        showToast(`Đã đồng bộ ${currentDetailVia.ten} thành công`);
+      }, 1000);
+    }
+
+    // 12. Modal "Lấy lại token" — gia hạn token cho VIA
+    let currentRefreshVia = null;
+
+    function openRefreshTokenModal(viaId) {
+      const v = VIA.find((x) => x.id === viaId);
+      if (!v) return;
+      currentRefreshVia = v;
+      document.getElementById('refresh-via-name').textContent = v.ten;
+      // Reset block URL từ xa
+      document.getElementById('remote-url-block').classList.add('hidden');
+      document.getElementById('remote-url').value = '';
+      // Reset nút direct
+      const directBtn = document.getElementById('refresh-direct-btn');
+      directBtn.disabled = false;
+      directBtn.innerHTML = '<i data-lucide="facebook" class="w-4 h-4"></i> Đăng nhập bằng Facebook';
+      document.getElementById('refresh-token-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeRefreshTokenModal() {
+      document.getElementById('refresh-token-modal').classList.add('hidden');
+      currentRefreshVia = null;
+    }
+    // OAuth trực tiếp — mock loading 2s rồi thành công
+    function refreshTokenDirect() {
+      if (!currentRefreshVia) return;
+      const btn = document.getElementById('refresh-direct-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang xác thực với Facebook...';
+      refreshIcons();
+      setTimeout(() => completeRefreshToken(), 2000);
+    }
+    // OAuth từ xa — sinh URL mẫu
+    function generateRemoteUrl() {
+      if (!currentRefreshVia) return;
+      const url = `https://tnmanager.app/oauth/callback?via=${currentRefreshVia.id}&state=${Math.random().toString(36).slice(2, 10)}`;
+      document.getElementById('remote-url').value = url;
+      document.getElementById('remote-url-block').classList.remove('hidden');
+      refreshIcons();
+    }
+    function copyRemoteUrl() {
+      const input = document.getElementById('remote-url');
+      const fallback = () => { input.select(); document.execCommand('copy'); };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(input.value).then(
+          () => showToast('Đã sao chép URL'),
+          fallback
+        );
+      } else {
+        fallback();
+        showToast('Đã sao chép URL');
+      }
+    }
+    function confirmRemoteSuccess() {
+      completeRefreshToken();
+    }
+    // Hoàn tất gia hạn — cập nhật tokenHetHan +60 ngày, đóng modal, xóa highlight
+    function completeRefreshToken() {
+      if (!currentRefreshVia) return;
+      const newDate = new Date();
+      newDate.setDate(newDate.getDate() + 60);
+      currentRefreshVia.tokenHetHan = newDate.toISOString().split('T')[0];
+      const tenVia = currentRefreshVia.ten;
+      closeRefreshTokenModal();
+      // Re-render bảng để hiển thị token mới
+      renderTable();
+      // Xóa highlight + banner cảnh báo
+      clearAlertHighlight();
+      showToast(`Đã lấy token thành công cho ${tenVia}`);
+    }
+
+    // 13. Xử lý URL params từ dashboard (canhbao + taiSan + action)
+    (function handleAlertParams() {
+      const params = new URLSearchParams(window.location.search);
+      const cbId = params.get('canhbao');
+      const taiSan = params.get('taiSan');
+      const action = params.get('action');
+      if (!taiSan) return;
+
+      // Hiện banner cảnh báo
+      const cb = CANH_BAO.find((c) => c.id === cbId);
+      const banner = document.getElementById('alert-banner');
+      document.getElementById('alert-banner-loai').textContent = cb ? cb.loai : 'Cần xử lý';
+      document.getElementById('alert-banner-asset').textContent = taiSan;
+      banner.classList.remove('hidden');
+
+      // Highlight + scroll đến row VIA tương ứng (nếu tìm thấy)
+      window.__highlightedVia = taiSan;
+      renderTable();
+      setTimeout(() => {
+        const row = document.querySelector(`[data-via-row="${taiSan}"]`);
+        if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 200);
+
+      // Nếu action = refresh_token → tự mở modal "Lấy lại token"
+      if (action === 'refresh_token') {
+        const v = VIA.find((x) => x.ten === taiSan);
+        // Nếu taiSan không phải VIA (ví dụ TKQC_001), vẫn mở modal cho VIA đầu tiên
+        // hoặc mở generic — ở đây fallback: chỉ mở nếu match VIA
+        if (v) {
+          setTimeout(() => openRefreshTokenModal(v.id), 400);
+        }
+      }
+    })();
+
+    // Xóa highlight + banner cảnh báo + clear URL params
+    function clearAlertHighlight() {
+      const banner = document.getElementById('alert-banner');
+      if (banner) banner.classList.add('hidden');
+      window.__highlightedVia = null;
+      renderTable();
+      // Clear URL params
+      const url = new URL(window.location);
+      url.searchParams.delete('canhbao');
+      url.searchParams.delete('taiSan');
+      url.searchParams.delete('action');
+      window.history.replaceState({}, '', url);
+    }
+
+    // 14. Đóng modal khi click ra ngoài hoặc nhấn ESC
+    ['login-modal', 'detail-modal', 'refresh-token-modal'].forEach((id) => {
+      const overlay = document.getElementById(id).querySelector('.fixed');
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          if (id === 'login-modal') closeLoginModal();
+          else if (id === 'detail-modal') closeDetailModal();
+          else closeRefreshTokenModal();
+        }
+      });
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeLoginModal();
+        closeDetailModal();
+        closeRefreshTokenModal();
+      }
+    });
+  </script>
+</body>
+</html>

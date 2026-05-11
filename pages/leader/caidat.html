@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cài đặt — Leader | TN Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
+    table tbody tr { transition: background-color 0.15s ease; }
+    .input-base {
+      width: 100%; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+      border: 1px solid #E2E8F0; border-radius: 0.5rem; outline: none;
+      transition: all 0.15s ease;
+    }
+    .input-base:focus { border-color: transparent; box-shadow: 0 0 0 2px #21A691; }
+    .input-base:disabled { background: #F8FAFB; color: #64748B; cursor: not-allowed; }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-panel { animation: modalIn 180ms ease-out; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .toast-show { animation: toastIn 220ms ease-out; }
+  </style>
+</head>
+<body class="bg-[#F0F4F4]">
+  <!-- Sidebar -->
+  <div id="sidebar"></div>
+
+  <!-- Header dùng chung -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+    <div class="flex items-center gap-2">
+      <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button type="button" class="relative p-2 rounded-full hover:bg-slate-100 transition" aria-label="Thông báo">
+        <i data-lucide="bell" class="w-5 h-5 text-slate-600" stroke-width="1.5"></i>
+        <span id="bell-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#EF4444] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">0</span>
+      </button>
+      <div id="header-user" class="flex items-center gap-2 px-2"></div>
+      <button onclick="logout()" type="button"
+        class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+    <div class="max-w-screen-xl mx-auto px-6 py-6">
+
+      <!-- 1. Page header -->
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-[#060D10]">Cài đặt</h1>
+        <p class="text-sm text-[#64748B] mt-1">Cấu hình hệ thống và quy tắc cảnh báo</p>
+      </div>
+
+      <!-- 2. 2-column layout -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- === Cột trái: menu danh mục === -->
+        <aside class="lg:col-span-1">
+          <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-2 sticky top-20">
+            <nav id="settings-menu" class="flex flex-col gap-0.5"></nav>
+          </div>
+        </aside>
+
+        <!-- === Cột phải: nội dung === -->
+        <div class="lg:col-span-2 space-y-4">
+
+          <!-- ===== Section 1: Thông tin tài khoản ===== -->
+          <div data-section-content="account">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <!-- Header avatar + name + role -->
+              <div class="flex items-start gap-4 pb-6 border-b border-slate-200 mb-6">
+                <div id="acc-avatar" class="w-20 h-20 rounded-full bg-[#21A691] text-white flex items-center justify-center text-3xl font-bold flex-shrink-0">N</div>
+                <div class="flex-1 min-w-0 pt-1">
+                  <h2 id="acc-display-name" class="text-xl font-bold text-[#060D10]">—</h2>
+                  <span class="inline-flex px-3 py-0.5 rounded-full text-xs font-medium text-white mt-2" style="background-color: #27403E;">
+                    Leader
+                  </span>
+                </div>
+              </div>
+
+              <!-- Form thông tin -->
+              <h3 class="text-base font-semibold text-[#060D10] mb-3">Thông tin cá nhân</h3>
+              <div class="space-y-3">
+                <div>
+                  <label for="acc-name" class="block text-xs font-medium text-slate-700 mb-1">Họ tên</label>
+                  <input id="acc-name" type="text" class="input-base" />
+                </div>
+                <div>
+                  <label for="acc-email" class="block text-xs font-medium text-slate-700 mb-1">Email <span class="text-slate-400 font-normal">(không thể thay đổi)</span></label>
+                  <input id="acc-email" type="email" disabled class="input-base" />
+                </div>
+                <div>
+                  <label for="acc-phone" class="block text-xs font-medium text-slate-700 mb-1">Số điện thoại</label>
+                  <input id="acc-phone" type="tel" placeholder="0901 234 567" class="input-base" value="0901 234 567" />
+                </div>
+              </div>
+
+              <!-- Đổi mật khẩu -->
+              <div class="my-6 border-t border-slate-200"></div>
+              <h3 class="text-base font-semibold text-[#060D10] mb-3">Đổi mật khẩu</h3>
+              <div class="space-y-3">
+                <div>
+                  <label for="pwd-current" class="block text-xs font-medium text-slate-700 mb-1">Mật khẩu hiện tại</label>
+                  <input id="pwd-current" type="password" class="input-base" />
+                </div>
+                <div>
+                  <label for="pwd-new" class="block text-xs font-medium text-slate-700 mb-1">Mật khẩu mới <span class="text-slate-400 font-normal">(tối thiểu 8 ký tự)</span></label>
+                  <input id="pwd-new" type="password" class="input-base" />
+                </div>
+                <div>
+                  <label for="pwd-confirm" class="block text-xs font-medium text-slate-700 mb-1">Xác nhận mật khẩu mới</label>
+                  <input id="pwd-confirm" type="password" class="input-base" />
+                </div>
+                <div id="pwd-error" class="hidden text-xs text-[#EF4444] bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+              </div>
+
+              <!-- Save button -->
+              <div class="flex justify-end mt-6 pt-6 border-t border-slate-200">
+                <button onclick="saveAccount()" type="button"
+                  class="bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium px-4 py-2 rounded-lg transition shadow-sm">
+                  Lưu thay đổi
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== Section 2: Quản lý nhân sự ===== -->
+          <div data-section-content="staff" class="hidden space-y-4">
+            <!-- Form thêm NS -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+              <h3 class="text-sm font-semibold text-[#060D10] mb-3">Thêm nhân sự mới</h3>
+              <div class="flex flex-wrap gap-2">
+                <input id="add-ns-name" type="text" placeholder="Họ tên" class="input-base flex-1 min-w-[160px]" />
+                <input id="add-ns-email" type="email" placeholder="email@agency.com" class="input-base flex-1 min-w-[180px]" />
+                <button onclick="addNS()" type="button"
+                  class="bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium px-4 py-2 rounded-lg flex items-center gap-1.5 transition shadow-sm">
+                  <i data-lucide="plus" class="w-4 h-4"></i>
+                  Thêm
+                </button>
+              </div>
+              <div id="add-ns-error" class="hidden mt-2 text-xs text-[#EF4444] bg-red-50 border border-red-200 rounded-lg px-3 py-2"></div>
+            </div>
+
+            <!-- Bảng NS -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div class="px-6 py-4 border-b border-slate-200">
+                <h3 class="text-base font-semibold text-[#060D10]">Danh sách nhân sự</h3>
+              </div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-[#F8FAFB] text-slate-600">
+                    <tr>
+                      <th class="text-left font-medium px-4 py-3">Tên</th>
+                      <th class="text-left font-medium px-4 py-3">Email</th>
+                      <th class="text-left font-medium px-4 py-3">Số KH phụ trách</th>
+                      <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                      <th class="text-right font-medium px-4 py-3">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ns-tbody" class="divide-y divide-slate-100"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== Section 3: Quy tắc cảnh báo ===== -->
+          <div data-section-content="rules" class="hidden space-y-4">
+            <!-- Section header -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h2 class="text-lg font-semibold text-[#060D10]">Cấu hình bảng luật cảnh báo rủi ro</h2>
+              <p class="text-sm text-[#64748B] mt-1">Xác định điều kiện kích hoạt và mức độ nghiêm trọng cho từng loại rủi ro</p>
+            </div>
+
+            <!-- Bảng rules -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead class="bg-[#F8FAFB] text-slate-600">
+                    <tr>
+                      <th class="text-left font-medium px-4 py-3">Loại rủi ro</th>
+                      <th class="text-left font-medium px-4 py-3">Điều kiện</th>
+                      <th class="text-left font-medium px-4 py-3">Mức độ</th>
+                      <th class="text-left font-medium px-4 py-3">Bật / Tắt</th>
+                      <th class="text-right font-medium px-4 py-3">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rules-tbody" class="divide-y divide-slate-100"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Threshold setting -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 class="text-base font-semibold text-[#060D10]">Ngưỡng cảnh báo thiếu VIA backup</h3>
+              <p class="text-sm text-[#64748B] mt-1 mb-4">
+                Phát cảnh báo khi số VIA cầm quyền &lt;
+                <span id="threshold-display" class="font-semibold text-[#21A691]">4</span>
+              </p>
+              <div class="flex gap-2 max-w-xs">
+                <input id="via-threshold" type="number" min="1" max="20" value="4" class="input-base flex-1" />
+                <button onclick="saveThreshold()" type="button"
+                  class="bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium px-4 py-2 rounded-lg transition shadow-sm flex-shrink-0">
+                  Cập nhật
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ===== Section 4: Cài đặt đồng bộ ===== -->
+          <div data-section-content="sync" class="hidden space-y-4">
+            <!-- Chu kỳ -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 class="text-base font-semibold text-[#060D10] mb-1">Chu kỳ đồng bộ tự động</h3>
+              <p class="text-sm text-[#64748B] mb-3">Hệ thống sẽ tự đồng bộ các tài sản theo chu kỳ này.</p>
+              <div class="flex items-center gap-3">
+                <label for="sync-interval" class="text-sm text-slate-700">Đồng bộ mỗi:</label>
+                <select id="sync-interval" class="input-base max-w-[180px]">
+                  <option value="5">5 phút</option>
+                  <option value="15" selected>15 phút</option>
+                  <option value="30">30 phút</option>
+                  <option value="60">1 giờ</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Đồng bộ thủ công -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 class="text-base font-semibold text-[#060D10] mb-3">Đồng bộ thủ công</h3>
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <button id="sync-all-btn" onclick="syncAll()" type="button"
+                  class="bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium px-4 py-2 rounded-lg flex items-center gap-2 transition shadow-sm">
+                  <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                  Đồng bộ tất cả ngay
+                </button>
+                <div class="text-sm text-slate-500">
+                  Lần đồng bộ cuối: <span class="font-medium text-[#060D10]">15 phút trước</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Thông báo -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h3 class="text-base font-semibold text-[#060D10] mb-4">Thông báo</h3>
+              <div class="space-y-4">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-[#060D10]">Nhận email khi có cảnh báo mức Cao</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Email sẽ được gửi đến địa chỉ leader@agency.com</div>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer flex-shrink-0 mt-1">
+                    <input id="notif-email" type="checkbox" class="sr-only peer" checked />
+                    <div class="w-10 h-5 bg-slate-300 peer-checked:bg-[#21A691] rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-5"></div>
+                  </label>
+                </div>
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-[#060D10]">Nhận thông báo trong hệ thống</div>
+                    <div class="text-xs text-slate-500 mt-0.5">Hiển thị badge trên chuông notification ở header</div>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer flex-shrink-0 mt-1">
+                    <input id="notif-inapp" type="checkbox" class="sr-only peer" checked />
+                    <div class="w-10 h-5 bg-slate-300 peer-checked:bg-[#21A691] rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-5"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Save -->
+            <div class="flex justify-end">
+              <button onclick="saveSync()" type="button"
+                class="bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium px-4 py-2 rounded-lg transition shadow-sm">
+                Lưu cài đặt
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ===== Modal: Confirm dialog (vô hiệu hóa NS) ===== -->
+  <div id="confirm-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md modal-panel">
+        <div class="p-6">
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <i data-lucide="alert-triangle" class="w-5 h-5 text-[#EF4444]"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 id="confirm-title" class="text-base font-semibold text-[#060D10] mb-1">Xác nhận</h3>
+              <p id="confirm-message" class="text-sm text-slate-600">—</p>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+          <button onclick="closeConfirm()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 rounded-lg transition">Hủy</button>
+          <button id="confirm-yes-btn" type="button"
+            class="px-4 py-2 text-sm font-medium bg-[#EF4444] hover:bg-[#DC2626] text-white rounded-lg transition">Xác nhận</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2">
+    <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5 text-[#21A691]"></i>
+    <span id="toast-message" class="text-sm font-medium text-[#060D10]">—</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../assets/js/auth.js"></script>
+  <script src="../../assets/js/data.js"></script>
+  <script src="../../components/sidebar.js"></script>
+
+  <script>
+    // 0. Bảo vệ + sidebar
+    checkAuth('leader');
+    renderSidebar('leader');
+
+    // 1. Render header user
+    (function renderHeaderUser() {
+      const user = getCurrentUser();
+      if (!user) return;
+      document.getElementById('header-user').innerHTML = `
+        <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
+        <div class="w-9 h-9 rounded-full bg-[#21A691] text-white font-semibold flex items-center justify-center">
+          ${user.name.charAt(0).toUpperCase()}
+        </div>
+      `;
+      // Bell badge — số cảnh báo chưa xử lý (dynamic từ data.js)
+      const count = CANH_BAO.filter((c) => c.trangThai === 'chua_xu_ly').length;
+      const badge = document.getElementById('bell-badge');
+      if (badge) {
+        badge.textContent = count;
+        badge.classList.toggle('hidden', count === 0);
+      }
+    })();
+
+    // 2. Helpers chung
+    function refreshIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    }
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toast-icon');
+      document.getElementById('toast-message').textContent = message;
+      const cfg = {
+        success: { icon: 'check-circle-2', color: '#21A691' },
+        warning: { icon: 'alert-triangle', color: '#F59E0B' },
+        error:   { icon: 'x-circle',       color: '#EF4444' }
+      }[type] || { icon: 'check-circle-2', color: '#21A691' };
+      icon.setAttribute('data-lucide', cfg.icon);
+      icon.style.color = cfg.color;
+      toast.classList.remove('hidden');
+      toast.classList.remove('toast-show');
+      void toast.offsetWidth;
+      toast.classList.add('toast-show');
+      refreshIcons();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // 3. Sidebar menu danh mục
+    const SECTIONS = [
+      { id: 'account', label: 'Thông tin tài khoản', icon: 'user' },
+      { id: 'staff',   label: 'Quản lý nhân sự',     icon: 'users' },
+      { id: 'rules',   label: 'Quy tắc cảnh báo',    icon: 'shield-alert' },
+      { id: 'sync',    label: 'Cài đặt đồng bộ',     icon: 'refresh-cw' }
+    ];
+    let currentSection = 'account';
+
+    function renderMenu() {
+      document.getElementById('settings-menu').innerHTML = SECTIONS.map((s) => {
+        const isActive = s.id === currentSection;
+        const cls = isActive
+          ? 'bg-[#21A691] text-white'
+          : 'text-[#64748B] hover:bg-[#F0F4F4] hover:text-[#060D10]';
+        return `
+          <button onclick="switchSection('${s.id}')" data-section-btn="${s.id}" type="button"
+            class="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition text-left ${cls}">
+            <i data-lucide="${s.icon}" class="w-4 h-4 flex-shrink-0"></i>
+            <span>${s.label}</span>
+          </button>
+        `;
+      }).join('');
+      refreshIcons();
+    }
+    function switchSection(id) {
+      currentSection = id;
+      // Cập nhật style menu
+      document.querySelectorAll('[data-section-btn]').forEach((btn) => {
+        const isActive = btn.dataset.sectionBtn === id;
+        btn.classList.toggle('bg-[#21A691]', isActive);
+        btn.classList.toggle('text-white', isActive);
+        btn.classList.toggle('text-[#64748B]', !isActive);
+        btn.classList.toggle('hover:bg-[#F0F4F4]', !isActive);
+        btn.classList.toggle('hover:text-[#060D10]', !isActive);
+      });
+      // Show/hide section content
+      document.querySelectorAll('[data-section-content]').forEach((div) => {
+        div.classList.toggle('hidden', div.dataset.sectionContent !== id);
+      });
+    }
+    renderMenu();
+
+    // 4. Section 1 — Account
+    (function initAccount() {
+      const user = getCurrentUser();
+      if (!user) return;
+      document.getElementById('acc-display-name').textContent = user.name;
+      document.getElementById('acc-name').value = user.name;
+      document.getElementById('acc-email').value = user.email;
+      document.getElementById('acc-avatar').textContent = user.name.charAt(0).toUpperCase();
+    })();
+
+    function saveAccount() {
+      const newPwd = document.getElementById('pwd-new').value;
+      const confirmPwd = document.getElementById('pwd-confirm').value;
+      const currentPwd = document.getElementById('pwd-current').value;
+      const errEl = document.getElementById('pwd-error');
+      errEl.classList.add('hidden');
+
+      // Chỉ validate password nếu user định đổi
+      if (newPwd || confirmPwd || currentPwd) {
+        if (!currentPwd) {
+          errEl.textContent = 'Vui lòng nhập mật khẩu hiện tại';
+          errEl.classList.remove('hidden'); return;
+        }
+        if (newPwd.length < 8) {
+          errEl.textContent = 'Mật khẩu mới phải có ít nhất 8 ký tự';
+          errEl.classList.remove('hidden'); return;
+        }
+        if (newPwd !== confirmPwd) {
+          errEl.textContent = 'Xác nhận mật khẩu không khớp';
+          errEl.classList.remove('hidden'); return;
+        }
+        // Reset password fields sau khi "lưu"
+        ['pwd-current', 'pwd-new', 'pwd-confirm'].forEach((id) => {
+          document.getElementById(id).value = '';
+        });
+      }
+
+      // Cập nhật tên hiển thị nếu user đổi
+      const newName = document.getElementById('acc-name').value.trim();
+      if (newName) document.getElementById('acc-display-name').textContent = newName;
+
+      showToast('Đã lưu thay đổi');
+    }
+
+    // 5. Section 2 — Staff
+    function nsStatusBadge(trangThai) {
+      if (trangThai === 'active') {
+        return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>`;
+      }
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu</span>`;
+    }
+    function renderNSTable() {
+      const tbody = document.getElementById('ns-tbody');
+      if (NHAN_SU.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">Chưa có nhân sự nào</td></tr>`;
+      } else {
+        tbody.innerHTML = NHAN_SU.map((n) => {
+          const action = n.trangThai === 'active'
+            ? `<button onclick="confirmDisableNS('${n.id}')" type="button"
+                class="text-[#EF4444] hover:bg-red-50 px-2.5 py-1 rounded transition flex items-center gap-1 text-xs font-medium ml-auto">
+                <i data-lucide="ban" class="w-3.5 h-3.5"></i>
+                Vô hiệu hóa
+              </button>`
+            : `<span class="text-xs text-slate-400">Đã vô hiệu</span>`;
+          return `
+            <tr class="hover:bg-[#F0F4F4]">
+              <td class="px-4 py-3 font-medium text-[#060D10]">${n.ten}</td>
+              <td class="px-4 py-3 text-slate-600">${n.email}</td>
+              <td class="px-4 py-3 text-slate-700">${n.soKhachHang}</td>
+              <td class="px-4 py-3">${nsStatusBadge(n.trangThai)}</td>
+              <td class="px-4 py-3 text-right">${action}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+      refreshIcons();
+    }
+    renderNSTable();
+
+    function addNS() {
+      const nameEl = document.getElementById('add-ns-name');
+      const emailEl = document.getElementById('add-ns-email');
+      const errEl = document.getElementById('add-ns-error');
+      const name = nameEl.value.trim();
+      const email = emailEl.value.trim();
+      errEl.classList.add('hidden');
+
+      if (!name || !email) {
+        errEl.textContent = 'Vui lòng nhập đầy đủ tên và email';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (!email.includes('@')) {
+        errEl.textContent = 'Email không hợp lệ';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      if (NHAN_SU.some((n) => n.email === email)) {
+        errEl.textContent = 'Email đã tồn tại';
+        errEl.classList.remove('hidden');
+        return;
+      }
+      // Thêm vào array (in-memory only)
+      const nextId = 'NS' + String(NHAN_SU.length + 1).padStart(3, '0');
+      NHAN_SU.push({ id: nextId, ten: name, email, soKhachHang: 0, trangThai: 'active' });
+      nameEl.value = '';
+      emailEl.value = '';
+      renderNSTable();
+      showToast(`Đã thêm nhân sự ${name}`);
+    }
+
+    function confirmDisableNS(nsId) {
+      const ns = NHAN_SU.find((n) => n.id === nsId);
+      if (!ns) return;
+      showConfirm(
+        'Vô hiệu hóa nhân sự',
+        `Vô hiệu hóa tài khoản ${ns.ten} sẽ tự động thu hồi toàn bộ quyền truy cập (BR-04).`,
+        () => {
+          ns.trangThai = 'disabled';
+          renderNSTable();
+          showToast(`Đã vô hiệu hóa ${ns.ten}`);
+        }
+      );
+    }
+
+    // 6. Section 3 — Rules
+    const RULES_DEFAULT = [
+      { loai: 'Tài sản bị vô hiệu hóa', dieuKien: 'Trạng thái API khác trạng thái hệ thống',  mucDo: 'cao',         batTat: true },
+      { loai: 'Mất quyền truy cập',     dieuKien: 'Tài sản không còn trong danh sách API của VIA', mucDo: 'cao',     batTat: true },
+      { loai: 'Token đã hết hạn',       dieuKien: 'tokenHetHan đã qua ngày hiện tại',         mucDo: 'cao',         batTat: true },
+      { loai: 'Thiếu VIA backup',       dieuKien: 'Số VIA cầm quyền < 4',                     mucDo: 'trung_binh',  batTat: true },
+      { loai: 'Token sắp hết hạn',      dieuKien: 'tokenHetHan còn dưới 7 ngày',              mucDo: 'thap',        batTat: true }
+    ];
+    let RULES = (() => {
+      const saved = localStorage.getItem('tnmanager_rules');
+      if (saved) { try { return JSON.parse(saved); } catch (e) {} }
+      return JSON.parse(JSON.stringify(RULES_DEFAULT));
+    })();
+    let rulesDirty = new Array(RULES.length).fill(false);
+
+    function mucDoBadge(mucDo) {
+      const cfg = {
+        cao:        { bg: '#FEE2E2', color: '#EF4444', label: 'Cao' },
+        trung_binh: { bg: '#FEF3C7', color: '#F59E0B', label: 'Trung bình' },
+        thap:       { bg: '#D1FAE5', color: '#21A691', label: 'Thấp' }
+      }[mucDo] || { bg: '#F1F5F9', color: '#64748B', label: mucDo };
+      return `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
+    }
+    function renderRulesTable() {
+      const tbody = document.getElementById('rules-tbody');
+      tbody.innerHTML = RULES.map((rule, idx) => `
+        <tr class="hover:bg-[#F0F4F4]">
+          <td class="px-4 py-3 font-medium text-[#060D10]">${rule.loai}</td>
+          <td class="px-4 py-3 text-xs text-slate-500">${rule.dieuKien}</td>
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              <select onchange="updateRuleLevel(${idx}, this.value)"
+                class="text-xs border border-slate-200 rounded px-2 py-1 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none bg-white">
+                <option value="cao" ${rule.mucDo === 'cao' ? 'selected' : ''}>Cao</option>
+                <option value="trung_binh" ${rule.mucDo === 'trung_binh' ? 'selected' : ''}>Trung bình</option>
+                <option value="thap" ${rule.mucDo === 'thap' ? 'selected' : ''}>Thấp</option>
+              </select>
+              <span id="rule-badge-${idx}">${mucDoBadge(rule.mucDo)}</span>
+            </div>
+          </td>
+          <td class="px-4 py-3">
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only peer" ${rule.batTat ? 'checked' : ''}
+                onchange="toggleRule(${idx}, this.checked)" />
+              <div class="w-10 h-5 bg-slate-300 peer-checked:bg-[#21A691] rounded-full transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-transform peer-checked:after:translate-x-5"></div>
+            </label>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <button id="rule-save-${idx}" onclick="saveRule(${idx})" type="button"
+              class="hidden text-xs font-medium bg-[#21A691] hover:bg-[#1A8A78] text-white px-3 py-1 rounded transition flex items-center gap-1 ml-auto">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              Lưu
+            </button>
+          </td>
+        </tr>
+      `).join('');
+      refreshIcons();
+    }
+    function updateRuleLevel(idx, value) {
+      RULES[idx].mucDo = value;
+      document.getElementById(`rule-badge-${idx}`).innerHTML = mucDoBadge(value);
+      markRuleDirty(idx);
+    }
+    function toggleRule(idx, checked) {
+      RULES[idx].batTat = checked;
+      markRuleDirty(idx);
+    }
+    function markRuleDirty(idx) {
+      rulesDirty[idx] = true;
+      const btn = document.getElementById(`rule-save-${idx}`);
+      if (btn) btn.classList.remove('hidden');
+    }
+    function saveRule(idx) {
+      rulesDirty[idx] = false;
+      localStorage.setItem('tnmanager_rules', JSON.stringify(RULES));
+      const btn = document.getElementById(`rule-save-${idx}`);
+      if (btn) btn.classList.add('hidden');
+      showToast(`Đã lưu quy tắc "${RULES[idx].loai}"`);
+    }
+    renderRulesTable();
+
+    // Threshold VIA backup
+    (function initThreshold() {
+      const saved = localStorage.getItem('tnmanager_via_threshold');
+      const value = saved ? parseInt(saved, 10) : 4;
+      document.getElementById('via-threshold').value = value;
+      document.getElementById('threshold-display').textContent = value;
+    })();
+    function saveThreshold() {
+      const input = document.getElementById('via-threshold');
+      const value = parseInt(input.value, 10);
+      if (isNaN(value) || value < 1 || value > 20) {
+        showToast('Ngưỡng phải từ 1 đến 20', 'warning');
+        return;
+      }
+      localStorage.setItem('tnmanager_via_threshold', String(value));
+      document.getElementById('threshold-display').textContent = value;
+      showToast(`Đã cập nhật ngưỡng VIA backup = ${value}`);
+    }
+
+    // 7. Section 4 — Sync settings
+    (function initSync() {
+      const interval = localStorage.getItem('tnmanager_sync_interval') || '15';
+      document.getElementById('sync-interval').value = interval;
+      const emailNotif = localStorage.getItem('tnmanager_notif_email');
+      const inappNotif = localStorage.getItem('tnmanager_notif_inapp');
+      // Mặc định là ON nếu chưa lưu
+      document.getElementById('notif-email').checked = emailNotif === null ? true : emailNotif === 'true';
+      document.getElementById('notif-inapp').checked = inappNotif === null ? true : inappNotif === 'true';
+    })();
+
+    function syncAll() {
+      const btn = document.getElementById('sync-all-btn');
+      const orig = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Đang đồng bộ...';
+      refreshIcons();
+      setTimeout(() => {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+        refreshIcons();
+        showToast('Đã đồng bộ tất cả tài sản thành công');
+      }, 1500);
+    }
+    function saveSync() {
+      const interval = document.getElementById('sync-interval').value;
+      const emailNotif = document.getElementById('notif-email').checked;
+      const inappNotif = document.getElementById('notif-inapp').checked;
+      localStorage.setItem('tnmanager_sync_interval', interval);
+      localStorage.setItem('tnmanager_notif_email', String(emailNotif));
+      localStorage.setItem('tnmanager_notif_inapp', String(inappNotif));
+      showToast('Đã lưu cài đặt đồng bộ');
+    }
+
+    // 8. Confirm dialog dùng chung
+    let _confirmCallback = null;
+    function showConfirm(title, message, onConfirm) {
+      document.getElementById('confirm-title').textContent = title;
+      document.getElementById('confirm-message').textContent = message;
+      _confirmCallback = onConfirm;
+      document.getElementById('confirm-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeConfirm() {
+      document.getElementById('confirm-modal').classList.add('hidden');
+      _confirmCallback = null;
+    }
+    document.getElementById('confirm-yes-btn').addEventListener('click', () => {
+      const cb = _confirmCallback;
+      closeConfirm();
+      if (cb) cb();
+    });
+    // Đóng confirm khi click overlay hoặc nhấn ESC
+    const confirmOverlay = document.getElementById('confirm-modal').querySelector('.fixed');
+    confirmOverlay.addEventListener('click', (e) => { if (e.target === confirmOverlay) closeConfirm(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeConfirm(); });
+  </script>
+</body>
+</html>

@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý khách hàng — Nhân sự | TN Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
+    table tbody tr { transition: background-color 0.15s ease; }
+    .kh-card { transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease; }
+    .kh-card:hover {
+      box-shadow: 0 8px 24px -8px rgba(33, 166, 145, 0.25);
+      border-color: #21A691;
+      transform: translateY(-2px);
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-panel { animation: modalIn 180ms ease-out; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .toast-show { animation: toastIn 220ms ease-out; }
+  </style>
+</head>
+<body class="bg-[#F0F4F4]">
+  <!-- Sidebar -->
+  <div id="sidebar"></div>
+
+  <!-- Header dùng chung -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+    <div class="flex items-center gap-2">
+      <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="dashboard.html" id="bell-link" class="relative p-2 rounded-full hover:bg-slate-100 transition" title="Xem thông báo">
+        <i data-lucide="bell" class="w-5 h-5 text-slate-600" stroke-width="1.5"></i>
+        <span id="bell-badge" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#EF4444] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">0</span>
+      </a>
+      <div id="header-user" class="flex items-center gap-2 px-2"></div>
+      <button onclick="logout()" type="button"
+        class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+    <div class="max-w-screen-xl mx-auto px-6 py-6">
+
+      <!-- 1. Page header -->
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-[#060D10]">Quản lý khách hàng</h1>
+        <p class="text-sm text-[#64748B] mt-1">Danh sách khách hàng bạn đang phụ trách</p>
+      </div>
+
+      <!-- 2. Stats mini -->
+      <div id="stats-mini" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4"></div>
+
+      <!-- 3. Toolbar -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex flex-wrap items-center gap-3">
+        <div class="relative flex-1 min-w-[240px] max-w-md">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+          <input id="search-input" type="text"
+            placeholder="Tìm theo tên khách hàng..."
+            class="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition" />
+        </div>
+        <select id="filter-status"
+          class="text-sm border border-slate-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white">
+          <option value="all">Tất cả trạng thái</option>
+          <option value="active">Hoạt động</option>
+          <option value="paused">Tạm ngưng</option>
+        </select>
+        <div class="ml-auto flex items-center gap-3">
+          <span id="total-count" class="text-sm text-slate-600 font-medium">Tổng: 0</span>
+          <button onclick="exportReport()" type="button"
+            class="bg-white border border-[#21A691] text-[#21A691] hover:bg-[#21A691]/5 font-medium px-3 py-2 rounded-lg flex items-center gap-2 transition text-sm">
+            <i data-lucide="download" class="w-4 h-4" stroke-width="2"></i>
+            Xuất báo cáo
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Card grid 2 cột -->
+      <div id="kh-cards" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
+      <!-- Pagination cho card grid -->
+      <div id="pagination" class="bg-white rounded-xl border border-slate-200 mt-3"></div>
+
+    </div>
+  </main>
+
+  <!-- ===== Modal Chi tiết KH (3 tabs, read-only) ===== -->
+  <div id="detail-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl modal-panel max-h-[90vh] flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div class="flex items-center gap-3 min-w-0">
+            <div id="detail-avatar" class="w-12 h-12 rounded-full bg-[#21A691] text-white flex items-center justify-center text-lg font-bold flex-shrink-0">—</div>
+            <div class="min-w-0">
+              <h2 id="detail-title" class="text-lg font-semibold text-[#060D10] truncate">—</h2>
+              <span id="detail-status-badge"></span>
+            </div>
+          </div>
+          <button onclick="closeDetailModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition flex-shrink-0" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+
+        <!-- Tabs -->
+        <div class="px-6 pt-3 border-b border-slate-200">
+          <div class="flex gap-1">
+            <button onclick="switchDetailTab('overview')" data-detail-tab="overview" type="button"
+              class="px-3 py-2.5 border-b-2 border-[#21A691] text-[#21A691] font-medium text-sm transition">
+              Tổng quan
+            </button>
+            <button onclick="switchDetailTab('tkqc')" data-detail-tab="tkqc" type="button"
+              class="px-3 py-2.5 border-b-2 border-transparent text-slate-600 hover:text-slate-800 font-medium text-sm transition">
+              TKQC
+            </button>
+            <button onclick="switchDetailTab('fanpage')" data-detail-tab="fanpage" type="button"
+              class="px-3 py-2.5 border-b-2 border-transparent text-slate-600 hover:text-slate-800 font-medium text-sm transition">
+              Fanpage
+            </button>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 overflow-y-auto flex-1">
+          <div id="detail-tab-content"></div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex items-center justify-end px-6 py-4 border-t border-slate-200">
+          <button onclick="closeDetailModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2">
+    <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5 text-[#21A691]"></i>
+    <span id="toast-message" class="text-sm font-medium text-[#060D10]">—</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../assets/js/auth.js"></script>
+  <script src="../../assets/js/data.js"></script>
+  <script src="../../components/sidebar.js"></script>
+  <script src="../../assets/js/pagination.js"></script>
+
+  <script>
+    // 0. Bảo vệ + sidebar
+    checkAuth('nhansu');
+    renderSidebar('nhansu');
+
+    // 1. Render header user
+    (function renderHeaderUser() {
+      const user = getCurrentUser();
+      if (!user) return;
+      document.getElementById('header-user').innerHTML = `
+        <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
+        <div class="w-9 h-9 rounded-full bg-[#21A691] text-white font-semibold flex items-center justify-center">
+          ${user.name.charAt(0).toUpperCase()}
+        </div>
+      `;
+    })();
+
+    // 2. Lọc data theo phạm vi KH mà nhân sự đang phụ trách
+    const user = getCurrentUser();
+    const myKHIds = KHACH_HANG
+      .filter((kh) => kh.nhanSuPhuTrach === user.email)
+      .map((kh) => kh.id);
+    const myKHs = KHACH_HANG.filter((kh) => myKHIds.includes(kh.id));
+
+    // Lookup
+    const bmMap = Object.fromEntries(BM.map((b) => [b.id, b.ten]));
+
+    // 3. Helpers
+    function refreshIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    }
+    function formatNumber(n) { return Number(n).toLocaleString('vi-VN'); }
+    function formatVND(n) { return Number(n).toLocaleString('vi-VN') + 'đ'; }
+
+    // Số liệu thực tế của 1 KH (compute từ TKQC + FANPAGE)
+    function getKhTKQCs(khId) { return TKQC.filter((t) => t.maKH === khId); }
+    function getKhFanpages(khId) { return FANPAGE.filter((f) => f.maKH === khId); }
+    function getKhViaTotal(khId) {
+      const tkqcs = getKhTKQCs(khId);
+      const fps = getKhFanpages(khId);
+      return tkqcs.reduce((s, t) => s + t.soVIA, 0) + fps.reduce((s, f) => s + f.soVIA, 0);
+    }
+    // Cảnh báo liên quan tới TKQC/Fanpage thuộc KH
+    function getKhAlerts(khId) {
+      const tkqcTens = new Set(getKhTKQCs(khId).map((t) => t.ten));
+      const fpTens = new Set(getKhFanpages(khId).map((f) => f.ten));
+      return CANH_BAO.filter((cb) => tkqcTens.has(cb.taiSan) || fpTens.has(cb.taiSan));
+    }
+
+    function khStatusBadge(trangThai) {
+      const cfg = {
+        active: { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động' },
+        paused: { bg: '#FEF3C7', color: '#F59E0B', label: 'Tạm ngưng' }
+      }[trangThai] || { bg: '#F1F5F9', color: '#64748B', label: trangThai };
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
+    }
+    function alertLevelBadge(mucDo) {
+      const cfg = {
+        cao:        { color: '#EF4444', label: 'Cao' },
+        trung_binh: { color: '#F59E0B', label: 'Trung bình' },
+        thap:       { color: '#21A691', label: 'Thấp' }
+      }[mucDo] || { color: '#64748B', label: mucDo };
+      return `<span class="text-xs font-medium px-2 py-0.5 rounded" style="background-color: #F1F5F9; color: ${cfg.color};">${cfg.label}</span>`;
+    }
+    function fpStatusBadge(trangThai) {
+      const cfg = {
+        active:     { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động' },
+        restricted: { bg: '#FEF3C7', color: '#F59E0B', label: 'Bị hạn chế' },
+        disabled:   { bg: '#FEE2E2', color: '#EF4444', label: 'Vô hiệu' }
+      }[trangThai] || { bg: '#F1F5F9', color: '#64748B', label: trangThai };
+      return `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
+    }
+    function progressColor(pct) {
+      if (pct >= 90) return '#EF4444';
+      if (pct >= 70) return '#F59E0B';
+      return '#21A691';
+    }
+
+    // Bell badge
+    (function updateBellBadge() {
+      const myTkqcTens = new Set();
+      const myFpTens = new Set();
+      myKHs.forEach((k) => {
+        getKhTKQCs(k.id).forEach((t) => myTkqcTens.add(t.ten));
+        getKhFanpages(k.id).forEach((f) => myFpTens.add(f.ten));
+      });
+      const unread = CANH_BAO.filter((cb) =>
+        cb.trangThai === 'chua_xu_ly' && (
+          myTkqcTens.has(cb.taiSan) ||
+          myFpTens.has(cb.taiSan) ||
+          cb.taiSan.startsWith('VIA_') ||
+          cb.taiSan.startsWith('Page_') ||
+          cb.taiSan.startsWith('BM_')
+        )
+      ).length;
+      const badge = document.getElementById('bell-badge');
+      badge.textContent = unread;
+      badge.classList.toggle('hidden', unread === 0);
+    })();
+
+    // 4. Stats mini
+    (function renderStatsMini() {
+      const tongKH = myKHs.length;
+      const tongTKQC = TKQC.filter((t) => myKHIds.includes(t.maKH)).length;
+      const tongFP = FANPAGE.filter((f) => myKHIds.includes(f.maKH)).length;
+
+      const cards = [
+        { num: tongKH,   label: 'Khách hàng phụ trách', icon: 'briefcase',   color: '#21A691', numColor: '#21A691' },
+        { num: tongTKQC, label: 'Tổng TKQC',            icon: 'credit-card', color: '#27403E', numColor: '#27403E' },
+        { num: tongFP,   label: 'Tổng Fanpage',         icon: 'flag',        color: '#27403E', numColor: '#27403E' }
+      ];
+      document.getElementById('stats-mini').innerHTML = cards.map((c) => `
+        <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${c.color}1A; color: ${c.color};">
+            <i data-lucide="${c.icon}" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" style="color: ${c.numColor};">${c.num}</div>
+            <div class="text-xs text-slate-500">${c.label}</div>
+          </div>
+        </div>
+      `).join('');
+    })();
+
+    // 5. Render card grid theo filter + phân trang 6/page
+    const cardsContainer = document.getElementById('kh-cards');
+    const totalCountEl = document.getElementById('total-count');
+    const searchInput = document.getElementById('search-input');
+    const filterStatus = document.getElementById('filter-status');
+    const ITEMS_PER_PAGE = 6;
+    let currentPage = 1;
+
+    function renderCards() {
+      const search = searchInput.value.toLowerCase().trim();
+      const status = filterStatus.value;
+
+      const filtered = myKHs.filter((k) => {
+        const matchSearch = !search || k.ten.toLowerCase().includes(search);
+        const matchStatus = status === 'all' || k.trangThai === status;
+        return matchSearch && matchStatus;
+      });
+
+      const pageInfo = paginate(filtered, currentPage, ITEMS_PER_PAGE);
+      currentPage = pageInfo.currentPage;
+
+      totalCountEl.textContent = `Tổng: ${pageInfo.total} KH`;
+
+      if (pageInfo.total === 0) {
+        cardsContainer.innerHTML = `
+          <div class="col-span-full bg-white rounded-xl border border-slate-200 py-10 text-center text-slate-400 text-sm">
+            <i data-lucide="search-x" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+            Không tìm thấy khách hàng phù hợp
+          </div>`;
+      } else {
+        cardsContainer.innerHTML = pageInfo.items.map((k) => {
+          const tkqcCount = getKhTKQCs(k.id).length;
+          const fpCount = getKhFanpages(k.id).length;
+          const viaTotal = getKhViaTotal(k.id);
+          const alertCount = getKhAlerts(k.id).length;
+          const alertColor = alertCount > 0 ? '#EF4444' : '#64748B';
+          const initial = k.ten.charAt(0).toUpperCase();
+
+          return `
+            <div class="kh-card bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+              <!-- Header -->
+              <div class="flex items-start justify-between gap-3 mb-4 pb-4 border-b border-slate-100">
+                <div class="flex items-center gap-3 flex-1 min-w-0">
+                  <div class="w-12 h-12 rounded-full bg-[#21A691] text-white flex items-center justify-center text-lg font-bold flex-shrink-0">
+                    ${initial}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h3 class="text-lg font-bold text-[#060D10] truncate">${k.ten}</h3>
+                    <p class="text-xs text-slate-400">${k.id}</p>
+                  </div>
+                </div>
+                ${khStatusBadge(k.trangThai)}
+              </div>
+              <!-- Body 2 cột -->
+              <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
+                <div class="space-y-2">
+                  <div class="flex items-center gap-2 text-slate-700">
+                    <i data-lucide="credit-card" class="w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+                    <span>TKQC: <span class="font-semibold text-[#060D10]">${tkqcCount}</span></span>
+                  </div>
+                  <div class="flex items-center gap-2 text-slate-700">
+                    <i data-lucide="flag" class="w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+                    <span>Fanpage: <span class="font-semibold text-[#060D10]">${fpCount}</span></span>
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <div class="flex items-center gap-2 text-slate-700">
+                    <i data-lucide="users" class="w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+                    <span>VIA phục vụ: <span class="font-semibold text-[#060D10]">${viaTotal}</span></span>
+                  </div>
+                  <div class="flex items-center gap-2" style="color: ${alertColor};">
+                    <i data-lucide="alert-triangle" class="w-4 h-4" stroke-width="1.5"></i>
+                    <span>Cảnh báo: <span class="font-semibold">${alertCount}</span></span>
+                  </div>
+                </div>
+              </div>
+              <!-- Footer -->
+              <button onclick="openDetailModal('${k.id}')" type="button"
+                class="w-full bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium py-2 rounded-lg flex items-center justify-center gap-1.5 transition shadow-sm">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+                Xem chi tiết
+              </button>
+            </div>
+          `;
+        }).join('');
+      }
+      refreshIcons();
+
+      renderPagination('pagination', pageInfo, (newPage) => {
+        currentPage = newPage;
+        renderCards();
+        if (cardsContainer) cardsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+
+    searchInput.addEventListener('input', () => { currentPage = 1; renderCards(); });
+    filterStatus.addEventListener('change', () => { currentPage = 1; renderCards(); });
+    renderCards();
+
+    // 6. Toast
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toast-icon');
+      document.getElementById('toast-message').textContent = message;
+      const cfg = {
+        success: { icon: 'check-circle-2', color: '#21A691' },
+        warning: { icon: 'alert-triangle', color: '#F59E0B' },
+        error:   { icon: 'x-circle',       color: '#EF4444' }
+      }[type] || { icon: 'check-circle-2', color: '#21A691' };
+      icon.setAttribute('data-lucide', cfg.icon);
+      icon.style.color = cfg.color;
+      toast.classList.remove('hidden');
+      toast.classList.remove('toast-show');
+      void toast.offsetWidth;
+      toast.classList.add('toast-show');
+      refreshIcons();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    function exportReport() {
+      showToast(`Đang xuất báo cáo khách hàng (${myKHs.length} bản ghi)...`, 'warning');
+    }
+    function exportKhReport() {
+      if (!currentKh) return;
+      showToast(`Đang xuất báo cáo khách hàng ${currentKh.ten}...`, 'warning');
+    }
+
+    // 7. Modal Chi tiết KH (3 tabs, read-only)
+    let currentKh = null;
+
+    function openDetailModal(khId) {
+      const k = myKHs.find((x) => x.id === khId);
+      if (!k) return;
+      currentKh = k;
+
+      document.getElementById('detail-title').textContent = k.ten;
+      document.getElementById('detail-status-badge').innerHTML = khStatusBadge(k.trangThai);
+      document.getElementById('detail-avatar').textContent = k.ten.charAt(0).toUpperCase();
+
+      switchDetailTab('overview');
+      document.getElementById('detail-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeDetailModal() {
+      document.getElementById('detail-modal').classList.add('hidden');
+      currentKh = null;
+    }
+    function switchDetailTab(tab) {
+      ['overview', 'tkqc', 'fanpage'].forEach((t) => {
+        const btn = document.querySelector(`[data-detail-tab="${t}"]`);
+        const isActive = t === tab;
+        btn.classList.toggle('border-[#21A691]', isActive);
+        btn.classList.toggle('text-[#21A691]', isActive);
+        btn.classList.toggle('border-transparent', !isActive);
+        btn.classList.toggle('text-slate-600', !isActive);
+      });
+      const container = document.getElementById('detail-tab-content');
+      if (!currentKh) { container.innerHTML = ''; return; }
+      if (tab === 'overview') container.innerHTML = renderTabOverview(currentKh);
+      else if (tab === 'tkqc') container.innerHTML = renderTabTKQC(currentKh);
+      else container.innerHTML = renderTabFanpage(currentKh);
+      refreshIcons();
+    }
+
+    // Tab Tổng quan
+    function renderTabOverview(k) {
+      const tkqcCount = getKhTKQCs(k.id).length;
+      const fpCount = getKhFanpages(k.id).length;
+      const viaTotal = getKhViaTotal(k.id);
+      const alerts = getKhAlerts(k.id);
+
+      // 3 ô số liệu
+      const stats = [
+        { label: 'TKQC đang dùng',     num: tkqcCount, icon: 'credit-card' },
+        { label: 'Fanpage',            num: fpCount,   icon: 'flag' },
+        { label: 'VIA đang phục vụ',   num: viaTotal,  icon: 'users' }
+      ];
+
+      // Cảnh báo block
+      const alertsHTML = alerts.length === 0
+        ? `<div class="flex items-center gap-2 text-sm text-[#21A691] bg-[#D1FAE5] border border-[#21A691]/20 rounded-lg p-3">
+             <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+             Không có cảnh báo nào
+           </div>`
+        : `<ul class="space-y-2">
+             ${alerts.map((cb) => `
+               <li class="flex items-start gap-3 p-3 bg-[#F8FAFB] border border-slate-200 rounded-lg">
+                 <i data-lucide="alert-triangle" class="w-4 h-4 mt-0.5 flex-shrink-0" style="color: #F59E0B;"></i>
+                 <div class="flex-1 min-w-0">
+                   <div class="flex items-start justify-between gap-2">
+                     <p class="text-sm font-medium text-[#060D10]">${cb.loai}</p>
+                     ${alertLevelBadge(cb.mucDo)}
+                   </div>
+                   <p class="text-xs text-slate-500 mt-0.5">${cb.taiSan} — ${cb.thoiGian}</p>
+                 </div>
+               </li>
+             `).join('')}
+           </ul>`;
+
+      return `
+        <div class="space-y-5">
+          <!-- Header tab + nút Xuất -->
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold text-[#060D10]">Số liệu tổng hợp</h3>
+            <button onclick="exportKhReport()" type="button"
+              class="text-xs font-medium border border-[#21A691] text-[#21A691] hover:bg-[#21A691]/5 px-3 py-1 rounded transition flex items-center gap-1">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              Xuất
+            </button>
+          </div>
+          <!-- 3 ô số liệu -->
+          <div class="grid grid-cols-3 gap-3">
+            ${stats.map((s) => `
+              <div class="bg-white border border-slate-200 rounded-lg p-4 text-center">
+                <i data-lucide="${s.icon}" class="w-5 h-5 mx-auto text-[#21A691]" stroke-width="1.5"></i>
+                <div class="text-2xl font-bold text-[#060D10] mt-1">${s.num}</div>
+                <div class="text-xs text-slate-500">${s.label}</div>
+              </div>
+            `).join('')}
+          </div>
+          <!-- Cảnh báo liên quan -->
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-2">
+              Cảnh báo liên quan ${alerts.length > 0 ? `<span class="text-xs font-normal text-slate-500">(${alerts.length})</span>` : ''}
+            </h3>
+            ${alertsHTML}
+          </div>
+        </div>
+      `;
+    }
+
+    // Tab TKQC (read-only, không có Thu hồi)
+    function renderTabTKQC(k) {
+      const list = getKhTKQCs(k.id);
+      if (list.length === 0) {
+        return '<p class="text-sm text-slate-400 text-center py-6">Chưa có TKQC nào</p>';
+      }
+      const rows = list.map((t) => {
+        const pct = t.hanMuc > 0 ? (t.chiTieu / t.hanMuc) * 100 : 0;
+        const barColor = progressColor(pct);
+        const rowBg = t.soVIA < 4 ? 'bg-[#FEF9C3]' : '';
+        const viaCell = t.soVIA < 4
+          ? `<span class="text-[#EF4444] font-semibold">${t.soVIA}</span>`
+          : `<span class="text-slate-700">${t.soVIA}</span>`;
+        const trangThai = t.trangThai === 'active'
+          ? '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>'
+          : '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu</span>';
+        return `
+          <tr class="${rowBg}">
+            <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${t.ten}</td>
+            <td class="px-3 py-2">${viaCell}</td>
+            <td class="px-3 py-2 text-slate-700 text-sm">${formatVND(t.hanMuc)}</td>
+            <td class="px-3 py-2">
+              <div class="text-sm text-slate-700">${formatVND(t.chiTieu)}</div>
+              <div class="mt-1 w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full" style="width: ${pct}%; background-color: ${barColor};"></div>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-0.5">${pct.toFixed(0)}%</div>
+            </td>
+            <td class="px-3 py-2">${trangThai}</td>
+          </tr>
+        `;
+      }).join('');
+      return `
+        <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+          <thead class="bg-[#F8FAFB] text-slate-600">
+            <tr>
+              <th class="text-left font-medium px-3 py-2">Tên TKQC</th>
+              <th class="text-left font-medium px-3 py-2">VIA</th>
+              <th class="text-left font-medium px-3 py-2">Hạn mức</th>
+              <th class="text-left font-medium px-3 py-2">Đã chi tiêu</th>
+              <th class="text-left font-medium px-3 py-2">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+      `;
+    }
+
+    // Tab Fanpage (read-only, không có Thu hồi)
+    function renderTabFanpage(k) {
+      const list = getKhFanpages(k.id);
+      if (list.length === 0) {
+        return '<p class="text-sm text-slate-400 text-center py-6">Chưa có Fanpage nào</p>';
+      }
+      const rows = list.map((f) => {
+        const rowBg = f.soVIA < 4 ? 'bg-[#FEF9C3]' : '';
+        const viaCell = f.soVIA < 4
+          ? `<span class="text-[#EF4444] font-semibold">${f.soVIA}</span>`
+          : `<span class="text-slate-700">${f.soVIA}</span>`;
+        return `
+          <tr class="${rowBg}">
+            <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${f.ten}</td>
+            <td class="px-3 py-2 text-slate-700 text-sm">${bmMap[f.maBM] || '—'}</td>
+            <td class="px-3 py-2 text-slate-700 text-sm">${formatNumber(f.followers)}</td>
+            <td class="px-3 py-2">${viaCell}</td>
+            <td class="px-3 py-2">${fpStatusBadge(f.trangThai)}</td>
+          </tr>
+        `;
+      }).join('');
+      return `
+        <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+          <thead class="bg-[#F8FAFB] text-slate-600">
+            <tr>
+              <th class="text-left font-medium px-3 py-2">Tên Fanpage</th>
+              <th class="text-left font-medium px-3 py-2">BM</th>
+              <th class="text-left font-medium px-3 py-2">Followers</th>
+              <th class="text-left font-medium px-3 py-2">VIA</th>
+              <th class="text-left font-medium px-3 py-2">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">${rows}</tbody>
+        </table>
+      `;
+    }
+
+    // 8. Đóng modal khi click overlay hoặc nhấn ESC
+    const overlay = document.getElementById('detail-modal').querySelector('.fixed');
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) closeDetailModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetailModal(); });
+  </script>
+</body>
+</html>

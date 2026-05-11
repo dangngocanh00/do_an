@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Nhân sự | TN Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
+    table tbody tr { transition: background-color 0.15s ease; }
+    /* Custom scrollbar mỏng cho notif-list */
+    #notif-list::-webkit-scrollbar { width: 4px; }
+    #notif-list::-webkit-scrollbar-track { background: transparent; }
+    #notif-list::-webkit-scrollbar-thumb { background: #21A691; border-radius: 4px; }
+    #notif-list::-webkit-scrollbar-thumb:hover { background: #1A8A78; }
+    /* Custom scrollbar mỏng — dùng cho các vùng scroll trong dashboard */
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #F0F4F4; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #21A691; border-radius: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #1A8A78; }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-panel { animation: modalIn 180ms ease-out; }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .toast-show { animation: toastIn 220ms ease-out; }
+  </style>
+</head>
+<body class="bg-[#F0F4F4]">
+  <!-- Sidebar -->
+  <div id="sidebar"></div>
+
+  <!-- Header dùng chung -->
+  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+    <div class="flex items-center gap-2">
+      <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Bell icon: click → toggle notification panel -->
+      <button onclick="toggleNotifPanel()" id="bell-btn" type="button" class="relative p-2 rounded-full hover:bg-slate-100 transition" aria-label="Thông báo">
+        <i data-lucide="bell" class="w-5 h-5 text-slate-600" stroke-width="1.5"></i>
+        <span id="bell-badge" class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-[#EF4444] text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">0</span>
+      </button>
+      <div id="header-user" class="flex items-center gap-2 px-2"></div>
+      <button onclick="logout()" type="button"
+        class="px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition flex items-center gap-1.5">
+        <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i>
+        Đăng xuất
+      </button>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+    <div class="max-w-screen-xl mx-auto px-6 py-6">
+
+      <!-- 1. Page header -->
+      <div class="mb-6">
+        <h1 class="text-2xl font-bold text-[#060D10]">Dashboard</h1>
+        <p class="text-sm text-[#64748B] mt-1">Tổng quan tài nguyên bạn đang phụ trách</p>
+      </div>
+
+      <!-- 2. Stats mini -->
+      <div id="stats-mini" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4"></div>
+
+      <!-- 3. Bảng cảnh báo của tôi -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 mb-6 overflow-hidden">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div class="flex items-center gap-3">
+            <h2 class="text-base font-semibold text-[#060D10]">Cảnh báo của tôi</h2>
+            <span id="alert-count" class="text-xs text-slate-500">0 cảnh báo</span>
+          </div>
+          <button onclick="openAlertsPanel()" type="button" class="text-sm text-[#21A691] font-medium hover:underline">Xem tất cả →</button>
+        </div>
+        <div class="overflow-y-auto custom-scroll max-h-[280px]">
+          <table class="w-full text-sm">
+            <thead class="bg-[#F8FAFB] text-slate-600 sticky top-0 z-10">
+              <tr>
+                <th class="text-left font-medium px-6 py-3">Tài sản</th>
+                <th class="text-left font-medium px-6 py-3">Loại rủi ro</th>
+                <th class="text-left font-medium px-6 py-3">Mức độ</th>
+                <th class="text-left font-medium px-6 py-3">Thời gian</th>
+                <th class="text-left font-medium px-6 py-3">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody id="alerts-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 4. Hai bảng dưới -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- TKQC -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+            <h2 class="text-base font-semibold text-[#060D10]">TKQC đang phụ trách</h2>
+            <a href="tkqc.html" class="text-sm text-[#21A691] font-medium hover:underline">Xem tất cả →</a>
+          </div>
+          <div class="overflow-y-auto custom-scroll max-h-[280px]">
+            <table class="w-full text-sm">
+              <thead class="bg-[#F8FAFB] text-slate-600 sticky top-0 z-10">
+                <tr>
+                  <th class="text-left font-medium px-6 py-3">Tên TKQC</th>
+                  <th class="text-left font-medium px-6 py-3">Khách hàng</th>
+                  <th class="text-left font-medium px-6 py-3">Trạng thái</th>
+                </tr>
+              </thead>
+              <tbody id="tkqc-tbody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- KH -->
+        <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+            <h2 class="text-base font-semibold text-[#060D10]">Khách hàng phụ trách</h2>
+            <a href="khachhang.html" class="text-sm text-[#21A691] font-medium hover:underline">Xem tất cả →</a>
+          </div>
+          <div class="overflow-y-auto custom-scroll max-h-[280px]">
+            <table class="w-full text-sm">
+              <thead class="bg-[#F8FAFB] text-slate-600 sticky top-0 z-10">
+                <tr>
+                  <th class="text-left font-medium px-6 py-3">Tên KH</th>
+                  <th class="text-left font-medium px-6 py-3">TKQC</th>
+                  <th class="text-left font-medium px-6 py-3">Fanpage</th>
+                  <th class="text-right font-medium px-6 py-3">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="kh-tbody" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ===== Modal: Xử lý cảnh báo ===== -->
+  <div id="process-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-md modal-panel">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <h2 class="text-lg font-semibold text-[#060D10]">Xử lý cảnh báo</h2>
+          <button onclick="closeProcessModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <!-- 3 ô thông tin cảnh báo -->
+          <div class="grid grid-cols-3 gap-3">
+            <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">
+              <div class="text-xs text-slate-500 mb-1">Tài sản</div>
+              <div id="proc-asset" class="text-sm font-semibold text-[#060D10]">—</div>
+            </div>
+            <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">
+              <div class="text-xs text-slate-500 mb-1">Loại rủi ro</div>
+              <div id="proc-loai" class="text-sm font-medium text-[#060D10]">—</div>
+            </div>
+            <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">
+              <div class="text-xs text-slate-500 mb-1">Mức độ</div>
+              <div id="proc-muc"></div>
+            </div>
+          </div>
+          <!-- Note -->
+          <div>
+            <label for="proc-note" class="block text-xs font-medium text-slate-700 mb-1">
+              Ghi chú xử lý <span class="text-slate-400 font-normal">(tùy chọn)</span>
+            </label>
+            <textarea id="proc-note" rows="3" placeholder="Mô tả thao tác đã thực hiện..."
+              class="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none resize-none"></textarea>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-2 px-6 py-4 border-t border-slate-200">
+          <button onclick="closeProcessModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Hủy</button>
+          <button onclick="confirmProcess()" type="button"
+            class="px-4 py-2 text-sm font-medium bg-[#21A691] hover:bg-[#1A8A78] text-white rounded-lg transition">
+            Đánh dấu đã xử lý
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Chi tiết KH (read-only cho nhân sự) ===== -->
+  <div id="kh-detail-modal" class="hidden">
+    <div class="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl modal-panel max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+          <div class="flex items-center gap-3">
+            <h2 id="kh-title" class="text-lg font-semibold text-[#060D10]">—</h2>
+            <span id="kh-status-badge"></span>
+          </div>
+          <button onclick="closeKhDetailModal()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+            <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+          </button>
+        </div>
+        <div class="p-6 overflow-y-auto flex-1 space-y-5">
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-2">TKQC đang dùng</h3>
+            <div id="kh-tkqc-list"></div>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-[#060D10] mb-2">Fanpage đang dùng</h3>
+            <div id="kh-fp-list"></div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end px-6 py-4 border-t border-slate-200">
+          <button onclick="closeKhDetailModal()" type="button"
+            class="px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg transition">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Modal: Tất cả cảnh báo của tôi (popup giữa màn hình) ===== -->
+  <div id="alerts-panel-wrapper" class="hidden fixed inset-0 z-50">
+    <!-- Overlay (click để đóng) -->
+    <div id="alerts-panel-overlay" class="absolute inset-0 bg-black/50"></div>
+    <!-- Modal box căn giữa với scale + opacity animation -->
+    <div id="alerts-panel"
+      class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] max-w-[90vw] max-h-[80vh] bg-white rounded-2xl shadow-2xl flex flex-col scale-95 opacity-0 transition-all duration-200 ease-out">
+      <!-- Header (cố định) -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 shrink-0">
+        <div class="flex items-center gap-3 min-w-0">
+          <h2 class="text-xl font-bold text-[#060D10] truncate">Cảnh báo của tôi</h2>
+          <span id="ap-count-badge"
+            class="inline-flex min-w-[24px] h-6 px-2 items-center justify-center rounded-full bg-[#EF4444] text-white text-xs font-bold">0</span>
+        </div>
+        <button onclick="closeAlertsPanel()" type="button"
+          class="p-1.5 hover:bg-slate-100 rounded-full transition flex-shrink-0" aria-label="Đóng">
+          <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+        </button>
+      </div>
+
+      <!-- Toolbar lọc (cố định dưới header) -->
+      <div class="px-6 py-3 border-b border-slate-200 shrink-0 bg-[#F8FAFB]">
+        <div class="flex flex-wrap items-center gap-2">
+          <select id="ap-filter-muc"
+            class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none bg-white">
+            <option value="all">Tất cả mức độ</option>
+            <option value="cao">🔴 Cao</option>
+            <option value="trung_binh">🟡 Trung bình</option>
+            <option value="thap">🟢 Thấp</option>
+          </select>
+          <select id="ap-filter-status"
+            class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none bg-white">
+            <option value="all">Tất cả trạng thái</option>
+            <option value="chua_xu_ly">Chưa xử lý</option>
+            <option value="da_xu_ly">Đã xử lý</option>
+          </select>
+          <select id="ap-filter-loai"
+            class="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none bg-white">
+            <option value="all">Tất cả loại</option>
+            <option value="Tài khoản bị vô hiệu hóa">Tài sản bị vô hiệu hóa</option>
+            <option value="Mất quyền truy cập">Mất quyền truy cập</option>
+            <option value="Token hết hạn">Token đã hết hạn</option>
+            <option value="Thiếu VIA backup">Thiếu VIA backup</option>
+            <option value="Token sắp hết hạn">Token sắp hết hạn</option>
+          </select>
+          <button onclick="resetAlertsFilter()" type="button"
+            class="ml-auto text-sm font-medium text-[#21A691] hover:bg-[#21A691]/10 px-3 py-1.5 rounded-lg transition">
+            Đặt lại
+          </button>
+        </div>
+      </div>
+
+      <!-- Body: danh sách cảnh báo (scroll) -->
+      <div id="ap-list" class="flex-1 overflow-y-auto"></div>
+
+      <!-- Footer (cố định dưới cùng) — chỉ tổng số, không có hành động xử lý -->
+      <div class="border-t border-slate-200 px-6 py-3 flex items-center justify-between gap-3 shrink-0 bg-white rounded-b-2xl">
+        <div id="ap-footer-text" class="text-sm text-slate-600">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Notification panel slide-in từ phải ===== -->
+  <div id="notif-backdrop" class="hidden fixed inset-0 bg-black/30 z-30 transition-opacity duration-200"></div>
+  <aside id="notif-panel" class="fixed top-0 right-0 h-screen w-80 sm:w-96 bg-white shadow-2xl transform translate-x-full transition-transform duration-300 z-40 flex flex-col">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+      <h2 class="text-base font-semibold text-[#060D10]">Thông báo của tôi</h2>
+      <button onclick="closeNotifPanel()" type="button" class="p-1 hover:bg-slate-100 rounded transition" aria-label="Đóng">
+        <i data-lucide="x" class="w-5 h-5 text-slate-500"></i>
+      </button>
+    </div>
+    <div id="notif-list" class="flex-1 overflow-y-auto max-h-[calc(100vh-120px)]"></div>
+    <div class="border-t border-slate-200 p-3">
+      <button onclick="markAllRead()" type="button"
+        class="w-full text-sm font-medium text-[#21A691] hover:bg-[#21A691]/10 py-2 rounded-lg transition flex items-center justify-center gap-1.5">
+        <i data-lucide="check-check" class="w-4 h-4"></i>
+        Đánh dấu tất cả đã đọc
+      </button>
+    </div>
+  </aside>
+
+  <!-- Toast -->
+  <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2">
+    <i id="toast-icon" data-lucide="check-circle-2" class="w-5 h-5 text-[#21A691]"></i>
+    <span id="toast-message" class="text-sm font-medium text-[#060D10]">—</span>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../../assets/js/auth.js"></script>
+  <script src="../../assets/js/data.js"></script>
+  <script src="../../components/sidebar.js"></script>
+
+  <script>
+    // 0. Bảo vệ + sidebar (role nhansu)
+    checkAuth('nhansu');
+    renderSidebar('nhansu');
+
+    // 1. Render header user
+    (function renderHeaderUser() {
+      const user = getCurrentUser();
+      if (!user) return;
+      document.getElementById('header-user').innerHTML = `
+        <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
+        <div class="w-9 h-9 rounded-full bg-[#21A691] text-white font-semibold flex items-center justify-center">
+          ${user.name.charAt(0).toUpperCase()}
+        </div>
+      `;
+    })();
+
+    // 2. Helpers
+    function refreshIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
+    }
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toast-icon');
+      document.getElementById('toast-message').textContent = message;
+      const cfg = {
+        success: { icon: 'check-circle-2', color: '#21A691' },
+        warning: { icon: 'alert-triangle', color: '#F59E0B' },
+        error:   { icon: 'x-circle',       color: '#EF4444' }
+      }[type] || { icon: 'check-circle-2', color: '#21A691' };
+      icon.setAttribute('data-lucide', cfg.icon);
+      icon.style.color = cfg.color;
+      toast.classList.remove('hidden');
+      toast.classList.remove('toast-show');
+      void toast.offsetWidth;
+      toast.classList.add('toast-show');
+      refreshIcons();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    // 3. Lọc data theo phạm vi KH mà nhân sự đang phụ trách
+    const user = getCurrentUser();
+    const myKHIds = KHACH_HANG
+      .filter((kh) => kh.nhanSuPhuTrach === user.email)
+      .map((kh) => kh.id);
+    const myKHs = KHACH_HANG.filter((kh) => myKHIds.includes(kh.id));
+
+    // TKQC + Fanpage thuộc các KH đó
+    const myTKQCs = TKQC.filter((t) => myKHIds.includes(t.maKH));
+    const myFanpages = FANPAGE.filter((f) => myKHIds.includes(f.maKH));
+
+    // Map lookup nhanh
+    const khMap = Object.fromEntries(KHACH_HANG.map((k) => [k.id, k.ten]));
+    const bmMap = Object.fromEntries(BM.map((b) => [b.id, b.ten]));
+    // Tên TKQC tôi phụ trách (để filter cảnh báo theo taiSan)
+    const myTkqcTens = new Set(myTKQCs.map((t) => t.ten));
+    const myFpTens = new Set(myFanpages.map((f) => f.ten));
+
+    // Cảnh báo của tôi: taiSan trùng tên TKQC/Fanpage tôi phụ trách
+    // (CANH_BAO trong dataset hiện tại có taiSan là tên/ID đa dạng — match theo prefix)
+    const myAlerts = CANH_BAO.filter((cb) => {
+      const t = cb.taiSan;
+      // Match TKQC/Fanpage tôi phụ trách
+      if (myTkqcTens.has(t)) return true;
+      if (myFpTens.has(t)) return true;
+      // Match VIA / BM / Page khác — dataset NS này phụ trách toàn bộ KH
+      // nên cứ include để timeline có data demo
+      return true;
+    });
+
+    // 4. Stats mini
+    (function renderStatsMini() {
+      const cards = [
+        { num: myTKQCs.length,    label: 'TKQC phụ trách',     icon: 'credit-card', color: '#21A691', numColor: '#21A691' },
+        { num: myFanpages.length, label: 'Fanpage phụ trách',  icon: 'flag',        color: '#21A691', numColor: '#21A691' },
+        { num: myKHs.length,     label: 'Khách hàng',          icon: 'briefcase',   color: '#27403E', numColor: '#27403E' },
+        { num: myAlerts.filter((c) => c.trangThai === 'chua_xu_ly').length,
+          label: 'Cảnh báo của tôi',  icon: 'bell',        color: '#EF4444', numColor: '#EF4444' }
+      ];
+      document.getElementById('stats-mini').innerHTML = cards.map((c) => `
+        <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
+          <div class="w-10 h-10 rounded-lg flex items-center justify-center" style="background-color: ${c.color}1A; color: ${c.color};">
+            <i data-lucide="${c.icon}" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="text-2xl font-bold" style="color: ${c.numColor};">${c.num}</div>
+            <div class="text-xs text-slate-500">${c.label}</div>
+          </div>
+        </div>
+      `).join('');
+    })();
+
+    // 5. Badge mức độ + trạng thái cảnh báo (đồng bộ với Leader dashboard)
+    function mucDoBadge(mucDo) {
+      const cfg = {
+        cao:        { text: '#EF4444', icon: '🔴', label: 'Cao' },
+        trung_binh: { text: '#F59E0B', icon: '🟡', label: 'Trung bình' },
+        thap:       { text: '#21A691', icon: '🟢', label: 'Thấp' }
+      }[mucDo] || { text: '#64748B', icon: '⚪', label: mucDo };
+      return `<span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-medium" style="background-color: #F1F5F9; color: ${cfg.text};">${cfg.icon} ${cfg.label}</span>`;
+    }
+    function trangThaiBadge(trangThai) {
+      if (trangThai === 'chua_xu_ly') {
+        return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Chưa xử lý</span>`;
+      }
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Đã xử lý</span>`;
+    }
+    function khStatusBadge(trangThai) {
+      const cfg = {
+        active: { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động' },
+        paused: { bg: '#FEF3C7', color: '#F59E0B', label: 'Tạm ngưng' }
+      }[trangThai] || { bg: '#F1F5F9', color: '#64748B', label: trangThai };
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
+    }
+
+    // 6. Render bảng cảnh báo của tôi
+    function renderAlertsTable() {
+      const tbody = document.getElementById('alerts-tbody');
+      const countEl = document.getElementById('alert-count');
+      const items = myAlerts;
+      countEl.textContent = `${items.filter((c) => c.trangThai === 'chua_xu_ly').length} cảnh báo chưa xử lý`;
+
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400 text-sm">Không có cảnh báo nào</td></tr>`;
+      } else {
+        tbody.innerHTML = items.map((cb) => {
+          return `
+            <tr class="hover:bg-[#F0F4F4]">
+              <td class="px-6 py-3 font-medium text-[#060D10]">${cb.taiSan}</td>
+              <td class="px-6 py-3 text-slate-600">${cb.loai}</td>
+              <td class="px-6 py-3">${mucDoBadge(cb.mucDo)}</td>
+              <td class="px-6 py-3 text-slate-500 text-xs">${cb.thoiGian}</td>
+              <td class="px-6 py-3">${trangThaiBadge(cb.trangThai)}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+      refreshIcons();
+    }
+    renderAlertsTable();
+
+    // 7. Render bảng TKQC + KH
+    function renderTkqcTable() {
+      const tbody = document.getElementById('tkqc-tbody');
+      const items = myTKQCs.slice(0, 5);
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-400 text-sm">Chưa có TKQC</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = items.map((t) => {
+        const isDisabled = t.trangThai === 'disabled';
+        const trangThai = isDisabled
+          ? '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu</span>'
+          : '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>';
+        // Highlight row TKQC vô hiệu: nền đỏ nhạt + chữ mờ
+        const rowBg = isDisabled ? 'bg-red-50' : '';
+        const cellText = isDisabled ? 'text-slate-400' : 'text-slate-600';
+        const nameText = isDisabled ? 'text-slate-400' : 'text-[#060D10]';
+        return `
+          <tr class="${rowBg} hover:bg-[#F0F4F4]">
+            <td class="px-6 py-3 font-medium ${nameText}">${t.ten}</td>
+            <td class="px-6 py-3 ${cellText}">${khMap[t.maKH] || '—'}</td>
+            <td class="px-6 py-3">${trangThai}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+    renderTkqcTable();
+
+    function renderKhTable() {
+      const tbody = document.getElementById('kh-tbody');
+      if (myKHs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-sm">Chưa có khách hàng</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = myKHs.slice(0, 5).map((k) => {
+        const tkqcCount = TKQC.filter((t) => t.maKH === k.id).length;
+        const fpCount = FANPAGE.filter((f) => f.maKH === k.id).length;
+        return `
+          <tr class="hover:bg-[#F0F4F4]">
+            <td class="px-6 py-3 font-medium text-[#060D10]">${k.ten}</td>
+            <td class="px-6 py-3 text-slate-700">${tkqcCount}</td>
+            <td class="px-6 py-3 text-slate-700">${fpCount}</td>
+            <td class="px-6 py-3 text-right">
+              <button onclick="openKhDetailModal('${k.id}')" type="button"
+                class="text-xs font-medium text-[#21A691] hover:bg-[#21A691]/10 px-2.5 py-1 rounded transition flex items-center gap-1 ml-auto">
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                Xem chi tiết
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      refreshIcons();
+    }
+    renderKhTable();
+
+    // 8. Modal xử lý cảnh báo
+    let currentAlert = null;
+    function openProcessModal(alertId) {
+      const cb = myAlerts.find((c) => c.id === alertId);
+      if (!cb) return;
+      currentAlert = cb;
+      document.getElementById('proc-asset').textContent = cb.taiSan;
+      document.getElementById('proc-loai').textContent = cb.loai;
+      document.getElementById('proc-muc').innerHTML = mucDoBadge(cb.mucDo);
+      document.getElementById('proc-note').value = '';
+      document.getElementById('process-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeProcessModal() {
+      document.getElementById('process-modal').classList.add('hidden');
+      currentAlert = null;
+    }
+    function confirmProcess() {
+      if (!currentAlert) return;
+      currentAlert.trangThai = 'da_xu_ly';
+      const ten = currentAlert.taiSan;
+      notifRead.add(currentAlert.id);
+      closeProcessModal();
+      renderAlertsTable();
+      renderNotifList();
+      updateBellBadge();
+      // Cập nhật stats card cảnh báo
+      document.getElementById('stats-mini').children[3].querySelector('.text-2xl').textContent =
+        myAlerts.filter((c) => c.trangThai === 'chua_xu_ly').length;
+      showToast(`Đã xử lý cảnh báo ${ten} thành công`);
+    }
+
+    // 9. Modal chi tiết KH (read-only)
+    function openKhDetailModal(khId) {
+      const k = KHACH_HANG.find((x) => x.id === khId);
+      if (!k) return;
+      document.getElementById('kh-title').textContent = k.ten;
+      document.getElementById('kh-status-badge').innerHTML = khStatusBadge(k.trangThai);
+
+      // Bảng TKQC của KH
+      const tkqcs = TKQC.filter((t) => t.maKH === khId);
+      const tkqcHTML = tkqcs.length === 0
+        ? '<p class="text-sm text-slate-400 text-center py-4">Chưa có TKQC</p>'
+        : `<table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+            <thead class="bg-[#F8FAFB] text-slate-600">
+              <tr>
+                <th class="text-left font-medium px-3 py-2">Tên TKQC</th>
+                <th class="text-left font-medium px-3 py-2">Số VIA</th>
+                <th class="text-left font-medium px-3 py-2">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              ${tkqcs.map((t) => `
+                <tr>
+                  <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${t.ten}</td>
+                  <td class="px-3 py-2 text-slate-700 text-sm">${t.soVIA}</td>
+                  <td class="px-3 py-2">${t.trangThai === 'active'
+                    ? '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>'
+                    : '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu</span>'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>`;
+      document.getElementById('kh-tkqc-list').innerHTML = tkqcHTML;
+
+      // Bảng Fanpage của KH
+      const fps = FANPAGE.filter((f) => f.maKH === khId);
+      const fpHTML = fps.length === 0
+        ? '<p class="text-sm text-slate-400 text-center py-4">Chưa có Fanpage</p>'
+        : `<table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+            <thead class="bg-[#F8FAFB] text-slate-600">
+              <tr>
+                <th class="text-left font-medium px-3 py-2">Tên Fanpage</th>
+                <th class="text-left font-medium px-3 py-2">BM</th>
+                <th class="text-left font-medium px-3 py-2">Trạng thái</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              ${fps.map((f) => {
+                const cfg = {
+                  active:     { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động' },
+                  restricted: { bg: '#FEF3C7', color: '#F59E0B', label: 'Bị hạn chế' },
+                  disabled:   { bg: '#FEE2E2', color: '#EF4444', label: 'Vô hiệu' }
+                }[f.trangThai] || { bg: '#F1F5F9', color: '#64748B', label: f.trangThai };
+                return `
+                  <tr>
+                    <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${f.ten}</td>
+                    <td class="px-3 py-2 text-slate-700 text-sm">${bmMap[f.maBM] || '—'}</td>
+                    <td class="px-3 py-2"><span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span></td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>`;
+      document.getElementById('kh-fp-list').innerHTML = fpHTML;
+
+      document.getElementById('kh-detail-modal').classList.remove('hidden');
+      refreshIcons();
+    }
+    function closeKhDetailModal() {
+      document.getElementById('kh-detail-modal').classList.add('hidden');
+    }
+
+    // 9b. Modal "Tất cả cảnh báo của tôi" — copy pattern từ leader/dashboard, scope theo myAlerts
+    function openAlertsPanel() {
+      const wrapper = document.getElementById('alerts-panel-wrapper');
+      const panel = document.getElementById('alerts-panel');
+      wrapper.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        panel.classList.remove('scale-95', 'opacity-0');
+        panel.classList.add('scale-100', 'opacity-100');
+      });
+      document.body.style.overflow = 'hidden';
+      renderAlertsPanel();
+    }
+    function closeAlertsPanel() {
+      const wrapper = document.getElementById('alerts-panel-wrapper');
+      const panel = document.getElementById('alerts-panel');
+      panel.classList.remove('scale-100', 'opacity-100');
+      panel.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        wrapper.classList.add('hidden');
+        document.body.style.overflow = '';
+      }, 200);
+    }
+
+    // Render 1 item cảnh báo trong panel — chỉ hiển thị badge trạng thái, không có nút hành động
+    function renderAlertItem(cb) {
+      const mucBorder = { cao: '#EF4444', trung_binh: '#F59E0B', thap: '#21A691' }[cb.mucDo] || '#64748B';
+      const action = cb.trangThai === 'da_xu_ly'
+        ? `<span class="inline-flex items-center gap-1 text-xs font-medium text-[#21A691]">
+             <i data-lucide="check-circle-2" class="w-4 h-4"></i> Đã xử lý
+           </span>`
+        : `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Chưa xử lý</span>`;
+      return `
+        <div class="px-5 py-3 border-b border-slate-100 hover:bg-[#F8FAFB] transition" style="border-left: 4px solid ${mucBorder};">
+          <div class="flex-1 min-w-0">
+            <p class="font-bold text-sm text-[#060D10]">${cb.taiSan}</p>
+            <p class="text-xs text-slate-500 mt-0.5">${cb.loai}</p>
+            <div class="flex items-center flex-wrap gap-2 mt-2">
+              ${mucDoBadge(cb.mucDo)}
+              ${trangThaiBadge(cb.trangThai)}
+              <span class="text-xs text-slate-400">${cb.thoiGian}</span>
+            </div>
+          </div>
+          <div class="mt-3 flex justify-end">${action}</div>
+        </div>
+      `;
+    }
+
+    // Render toàn bộ panel theo filter hiện tại — chỉ trong phạm vi myAlerts
+    function renderAlertsPanel() {
+      const muc = document.getElementById('ap-filter-muc').value;
+      const status = document.getElementById('ap-filter-status').value;
+      const loai = document.getElementById('ap-filter-loai').value;
+
+      const filtered = myAlerts.filter((cb) => {
+        const matchMuc = muc === 'all' || cb.mucDo === muc;
+        const matchStatus = status === 'all' || cb.trangThai === status;
+        const matchLoai = loai === 'all'
+          || cb.loai === loai
+          || (loai === 'Token hết hạn' && cb.loai === 'Token đã hết hạn');
+        return matchMuc && matchStatus && matchLoai;
+      });
+
+      const list = document.getElementById('ap-list');
+      if (filtered.length === 0) {
+        list.innerHTML = `
+          <div class="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <i data-lucide="shield-check" class="w-12 h-12 text-[#21A691] mb-3"></i>
+            <p class="text-sm font-medium text-slate-500">Không có cảnh báo nào phù hợp</p>
+          </div>`;
+      } else {
+        list.innerHTML = filtered.map(renderAlertItem).join('');
+      }
+
+      const totalUnread = myAlerts.filter((c) => c.trangThai === 'chua_xu_ly').length;
+      const badge = document.getElementById('ap-count-badge');
+      badge.textContent = totalUnread;
+      badge.classList.toggle('hidden', totalUnread === 0);
+      document.getElementById('ap-footer-text').innerHTML =
+        `Tổng: <span class="font-semibold text-[#060D10]">${myAlerts.length}</span> cảnh báo — ` +
+        `<span class="font-semibold text-[#EF4444]">${totalUnread}</span> chưa xử lý`;
+
+      refreshIcons();
+    }
+
+    ['ap-filter-muc', 'ap-filter-status', 'ap-filter-loai'].forEach((id) => {
+      document.getElementById(id).addEventListener('change', renderAlertsPanel);
+    });
+
+    function resetAlertsFilter() {
+      document.getElementById('ap-filter-muc').value = 'all';
+      document.getElementById('ap-filter-status').value = 'all';
+      document.getElementById('ap-filter-loai').value = 'all';
+      renderAlertsPanel();
+    }
+
+    // Đóng modal khi click overlay
+    document.getElementById('alerts-panel-overlay').addEventListener('click', closeAlertsPanel);
+
+    // 10. Notification panel slide-in
+    // Set thông báo "đã đọc" — mặc định: cảnh báo da_xu_ly = đã đọc
+    const notifRead = new Set();
+    myAlerts.forEach((cb) => {
+      if (cb.trangThai === 'da_xu_ly') notifRead.add(cb.id);
+    });
+
+    function updateBellBadge() {
+      const unread = myAlerts.filter((cb) => !notifRead.has(cb.id)).length;
+      const badge = document.getElementById('bell-badge');
+      badge.textContent = unread;
+      badge.classList.toggle('hidden', unread === 0);
+    }
+
+    function renderNotifList() {
+      const list = document.getElementById('notif-list');
+      const items = myAlerts;
+      if (items.length === 0) {
+        list.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm">
+          <i data-lucide="bell-off" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
+          Không có thông báo
+        </div>`;
+      } else {
+        const ICON_BY_MUC = { cao: 'alert-triangle', trung_binh: 'alert-circle', thap: 'info' };
+        const COLOR_BY_MUC = { cao: '#EF4444', trung_binh: '#F59E0B', thap: '#21A691' };
+        list.innerHTML = items.map((cb) => {
+          const isRead = notifRead.has(cb.id);
+          const icon = ICON_BY_MUC[cb.mucDo] || 'bell';
+          const color = COLOR_BY_MUC[cb.mucDo] || '#64748B';
+          return `
+            <div class="px-4 py-3 border-b border-slate-100 flex gap-3 hover:bg-[#F8FAFB] transition cursor-pointer ${isRead ? '' : 'bg-[#21A691]/5'}"
+              onclick="markRead('${cb.id}')">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style="background-color: ${color}1A;">
+                <i data-lucide="${icon}" class="w-4 h-4" style="color: ${color};"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="text-sm ${isRead ? 'text-slate-600' : 'text-[#060D10] font-medium'} flex-1">
+                    ${cb.taiSan}
+                  </div>
+                  ${isRead
+                    ? '<span class="text-[10px] text-slate-400 flex-shrink-0">Đã đọc</span>'
+                    : '<span class="w-2 h-2 rounded-full bg-[#21A691] flex-shrink-0 mt-1.5"></span>'}
+                </div>
+                <div class="text-xs text-slate-500 mt-0.5">${cb.loai}</div>
+                <div class="text-xs text-slate-400 mt-1">${cb.thoiGian}</div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+      refreshIcons();
+    }
+
+    function markRead(id) {
+      notifRead.add(id);
+      renderNotifList();
+      updateBellBadge();
+    }
+    function markAllRead() {
+      myAlerts.forEach((cb) => notifRead.add(cb.id));
+      renderNotifList();
+      updateBellBadge();
+      showToast('Đã đánh dấu tất cả thông báo là đã đọc');
+    }
+    function toggleNotifPanel() {
+      const panel = document.getElementById('notif-panel');
+      const backdrop = document.getElementById('notif-backdrop');
+      const isOpen = !panel.classList.contains('translate-x-full');
+      if (isOpen) closeNotifPanel(); else openNotifPanel();
+    }
+    function openNotifPanel() {
+      document.getElementById('notif-panel').classList.remove('translate-x-full');
+      document.getElementById('notif-backdrop').classList.remove('hidden');
+      renderNotifList();
+    }
+    function closeNotifPanel() {
+      document.getElementById('notif-panel').classList.add('translate-x-full');
+      document.getElementById('notif-backdrop').classList.add('hidden');
+    }
+    document.getElementById('notif-backdrop').addEventListener('click', closeNotifPanel);
+
+    renderNotifList();
+    updateBellBadge();
+
+    // 11. Đóng modal khi click overlay hoặc nhấn ESC
+    ['process-modal', 'kh-detail-modal'].forEach((id) => {
+      const overlay = document.getElementById(id).querySelector('.fixed');
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          if (id === 'process-modal') closeProcessModal();
+          else closeKhDetailModal();
+        }
+      });
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeProcessModal();
+        closeKhDetailModal();
+        closeNotifPanel();
+        const apWrapper = document.getElementById('alerts-panel-wrapper');
+        if (apWrapper && !apWrapper.classList.contains('hidden')) closeAlertsPanel();
+      }
+    });
+  </script>
+</body>
+</html>
