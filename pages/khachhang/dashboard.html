@@ -153,6 +153,23 @@
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
+      <!-- Toolbar lọc -->
+      <div class="shrink-0 px-6 py-3 border-b border-slate-200 bg-[#F8FAFB]">
+        <div class="flex gap-3 items-center">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+            <input id="modal-tkqc-search" type="text" placeholder="Tìm theo tên TKQC..."
+              class="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white" />
+          </div>
+          <select id="modal-tkqc-filter-status"
+            class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition">
+            <option value="all">Tất cả</option>
+            <option value="active">Hoạt động</option>
+            <option value="disabled">Vô hiệu hóa</option>
+          </select>
+          <div id="modal-tkqc-total" class="text-sm text-slate-500 ml-auto">Tổng: 0 TKQC</div>
+        </div>
+      </div>
       <!-- Body scroll -->
       <div id="modal-tkqc-body" class="flex-1 overflow-y-auto modal-scroll">
         <table class="w-full text-sm">
@@ -188,6 +205,24 @@
           class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
+      </div>
+      <!-- Toolbar lọc -->
+      <div class="shrink-0 px-6 py-3 border-b border-slate-200 bg-[#F8FAFB]">
+        <div class="flex gap-3 items-center">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" stroke-width="1.5"></i>
+            <input id="modal-fp-search" type="text" placeholder="Tìm theo tên Fanpage..."
+              class="w-full pl-10 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition bg-white" />
+          </div>
+          <select id="modal-fp-filter-status"
+            class="text-sm border border-slate-200 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-[#21A691] focus:border-transparent outline-none transition">
+            <option value="all">Tất cả</option>
+            <option value="active">Hoạt động</option>
+            <option value="restricted">Bị hạn chế</option>
+            <option value="disabled">Vô hiệu hóa</option>
+          </select>
+          <div id="modal-fp-total" class="text-sm text-slate-500 ml-auto">Tổng: 0 Fanpage</div>
+        </div>
       </div>
       <!-- Body scroll -->
       <div id="modal-fp-body" class="flex-1 overflow-y-auto modal-scroll">
@@ -453,11 +488,23 @@
       document.getElementById('modal-tkqc').classList.remove('hidden');
       renderTkqcPage(1);
     }
+    function filteredTkqcs() {
+      const search = (document.getElementById('modal-tkqc-search').value || '').toLowerCase().trim();
+      const status = document.getElementById('modal-tkqc-filter-status').value;
+      return MY_TKQC.filter((t) => {
+        const matchSearch = !search || t.ten.toLowerCase().includes(search);
+        const matchStatus = status === 'all' || t.trangThai === status;
+        return matchSearch && matchStatus;
+      });
+    }
     function renderTkqcPage(page) {
-      const pageInfo = paginate(MY_TKQC, page, MODAL_IPP);
+      const filtered = filteredTkqcs();
+      document.getElementById('modal-tkqc-total').textContent = `Tổng: ${filtered.length} TKQC`;
+      const pageInfo = paginate(filtered, page, MODAL_IPP);
       const tbody = document.getElementById('modal-tkqc-tbody');
       if (pageInfo.total === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-sm">Chưa có TKQC nào</td></tr>`;
+        const emptyMsg = MY_TKQC.length === 0 ? 'Chưa có TKQC nào' : 'Không tìm thấy TKQC phù hợp';
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-sm">${emptyMsg}</td></tr>`;
       } else {
         tbody.innerHTML = pageInfo.items.map((t, idx) => {
           const stt = (pageInfo.currentPage - 1) * MODAL_IPP + idx + 1;
@@ -503,11 +550,23 @@
       document.getElementById('modal-fp').classList.remove('hidden');
       renderFpPage(1);
     }
+    function filteredFanpages() {
+      const search = (document.getElementById('modal-fp-search').value || '').toLowerCase().trim();
+      const status = document.getElementById('modal-fp-filter-status').value;
+      return MY_FANPAGE.filter((f) => {
+        const matchSearch = !search || f.ten.toLowerCase().includes(search);
+        const matchStatus = status === 'all' || f.trangThai === status;
+        return matchSearch && matchStatus;
+      });
+    }
     function renderFpPage(page) {
-      const pageInfo = paginate(MY_FANPAGE, page, MODAL_IPP);
+      const filtered = filteredFanpages();
+      document.getElementById('modal-fp-total').textContent = `Tổng: ${filtered.length} Fanpage`;
+      const pageInfo = paginate(filtered, page, MODAL_IPP);
       const tbody = document.getElementById('modal-fp-tbody');
       if (pageInfo.total === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 text-sm">Chưa có Fanpage nào</td></tr>`;
+        const emptyMsg = MY_FANPAGE.length === 0 ? 'Chưa có Fanpage nào' : 'Không tìm thấy Fanpage phù hợp';
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 text-sm">${emptyMsg}</td></tr>`;
       } else {
         tbody.innerHTML = pageInfo.items.map((f, idx) => {
           const stt = (pageInfo.currentPage - 1) * MODAL_IPP + idx + 1;
@@ -537,6 +596,12 @@
     function closeFpModal() {
       document.getElementById('modal-fp').classList.add('hidden');
     }
+
+    // Listener filter modal — reset về trang 1 mỗi khi đổi filter
+    document.getElementById('modal-tkqc-search').addEventListener('input', () => renderTkqcPage(1));
+    document.getElementById('modal-tkqc-filter-status').addEventListener('change', () => renderTkqcPage(1));
+    document.getElementById('modal-fp-search').addEventListener('input', () => renderFpPage(1));
+    document.getElementById('modal-fp-filter-status').addEventListener('change', () => renderFpPage(1));
 
     // 14. ESC đóng modal
     document.addEventListener('keydown', (e) => {

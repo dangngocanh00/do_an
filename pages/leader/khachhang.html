@@ -226,7 +226,7 @@
               <!-- BR-06: checkbox xác nhận khi thu hồi tài nguyên đang active -->
               <label id="confirm-br06-wrap" class="hidden mt-3 flex items-start gap-2 text-xs text-slate-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 cursor-pointer">
                 <input id="confirm-br06" type="checkbox" class="mt-0.5 w-3.5 h-3.5 rounded border-slate-300 text-[#EF4444] focus:ring-[#EF4444]" />
-                <span>Tôi hiểu rằng tài nguyên này đang <b>hoạt động</b>, việc thu hồi có thể ảnh hưởng đến chiến dịch của khách hàng.</span>
+                <span>Tôi xác nhận <b>không có chiến dịch đang chạy</b> trên tài nguyên này.</span>
               </label>
             </div>
           </div>
@@ -630,54 +630,91 @@
       `;
     }
 
-    // Tab TKQC
+    // Tab TKQC — 2 phần: Đang thuê / Gán thêm
     function renderDetailTKQCs(k) {
-      const list = TKQC.filter((t) => t.maKH === k.id);
-      if (list.length === 0) {
-        return '<p class="text-sm text-slate-400 text-center py-6">Chưa có TKQC nào được gán</p>';
-      }
-      const rows = list.map((t) => {
-        const trangThai = t.trangThai === 'active'
-          ? '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>'
-          : '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu hóa</span>';
-        return `
-          <tr class="hover:bg-[#F0F4F4]">
-            <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${t.ten}</td>
-            <td class="px-3 py-2 text-slate-700 text-sm">${formatVND(t.hanMuc)}</td>
-            <td class="px-3 py-2 text-slate-700 text-sm">${formatVND(t.chiTieu)}</td>
-            <td class="px-3 py-2">${trangThai}</td>
-            <td class="px-3 py-2 text-right">
-              <button onclick="confirmThuHoiTkqc('${t.ten}')" type="button"
-                class="px-2.5 py-1 text-xs font-medium text-[#EF4444] hover:bg-red-50 rounded transition flex items-center gap-1 ml-auto">
-                <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
-                Thu hồi
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-      return `
-        <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
-          <thead class="bg-[#F8FAFB] text-slate-600">
-            <tr>
-              <th class="text-left font-medium px-3 py-2">Tên TKQC</th>
-              <th class="text-left font-medium px-3 py-2">Hạn mức</th>
-              <th class="text-left font-medium px-3 py-2">Đã chi</th>
-              <th class="text-left font-medium px-3 py-2">Trạng thái</th>
-              <th class="text-right font-medium px-3 py-2">Thao tác</th>
+      const tkqcBadge = (s) => s === 'active'
+        ? '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>'
+        : '<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #FEE2E2; color: #EF4444;">Vô hiệu hóa</span>';
+
+      const dangThue = TKQC.filter((t) => t.maKH === k.id);
+      const ganThem = TKQC.filter((t) => !t.maKH);
+
+      const dangThueRows = dangThue.length === 0
+        ? `<tr><td colspan="5" class="text-center py-5 text-sm text-slate-400">Khách hàng này chưa thuê TKQC nào</td></tr>`
+        : dangThue.map((t) => `
+            <tr class="hover:bg-[#F0F4F4]">
+              <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${t.ten}</td>
+              <td class="px-3 py-2 text-slate-700 text-sm">${formatVND(t.hanMuc)}</td>
+              <td class="px-3 py-2 text-slate-700 text-sm">${formatVND(t.chiTieu)}</td>
+              <td class="px-3 py-2">${tkqcBadge(t.trangThai)}</td>
+              <td class="px-3 py-2 text-right">
+                <button onclick="confirmThuHoiTkqc('${t.ten}')" type="button"
+                  class="px-2.5 py-1 text-xs font-medium text-[#EF4444] border border-[#EF4444] hover:bg-red-50 rounded transition inline-flex items-center gap-1">
+                  <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                  Thu hồi
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">${rows}</tbody>
-        </table>
+          `).join('');
+
+      const ganThemRows = ganThem.length === 0
+        ? `<tr><td colspan="5" class="text-center py-5 text-sm text-slate-400">Không còn TKQC trống để gán</td></tr>`
+        : ganThem.map((t) => `
+            <tr class="hover:bg-[#F0F4F4]">
+              <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${t.ten}</td>
+              <td class="px-3 py-2 text-slate-700 text-sm">${formatVND(t.hanMuc)}</td>
+              <td class="px-3 py-2 text-slate-700 text-sm">${formatVND(t.chiTieu)}</td>
+              <td class="px-3 py-2">${tkqcBadge(t.trangThai)}</td>
+              <td class="px-3 py-2 text-right">
+                <button onclick="assignTkqcToCurrentKh('${t.id}')" type="button"
+                  class="px-2.5 py-1 text-xs font-medium bg-[#21A691] hover:bg-[#1A8A78] text-white rounded transition inline-flex items-center gap-1">
+                  <i data-lucide="link" class="w-3.5 h-3.5"></i>
+                  Gán
+                </button>
+              </td>
+            </tr>
+          `).join('');
+
+      const tableHead = `
+        <thead class="bg-[#F8FAFB] text-slate-600">
+          <tr>
+            <th class="text-left font-medium px-3 py-2">Tên TKQC</th>
+            <th class="text-left font-medium px-3 py-2">Hạn mức</th>
+            <th class="text-left font-medium px-3 py-2">Đã chi</th>
+            <th class="text-left font-medium px-3 py-2">Trạng thái</th>
+            <th class="text-right font-medium px-3 py-2 w-28">Thao tác</th>
+          </tr>
+        </thead>`;
+
+      return `
+        <section class="mb-5">
+          <div class="flex items-center gap-2 mb-2">
+            <h3 class="text-sm font-semibold text-slate-700">Đang thuê</h3>
+            <span class="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-xs font-semibold text-white rounded-full" style="background-color: #21A691;">${dangThue.length}</span>
+          </div>
+          <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+            ${tableHead}
+            <tbody class="divide-y divide-slate-100">${dangThueRows}</tbody>
+          </table>
+        </section>
+
+        <hr class="border-slate-200 my-4" />
+
+        <section>
+          <div class="flex items-center gap-2 mb-2">
+            <h3 class="text-sm font-semibold text-slate-700">Gán thêm</h3>
+            <span class="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-xs font-semibold text-white rounded-full" style="background-color: #64748B;">${ganThem.length}</span>
+          </div>
+          <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+            ${tableHead}
+            <tbody class="divide-y divide-slate-100">${ganThemRows}</tbody>
+          </table>
+        </section>
       `;
     }
 
-    // Tab Fanpage
+    // Tab Fanpage — 2 phần: Đang thuê / Gán thêm
     function renderDetailFanpages(k) {
-      const list = FANPAGE.filter((f) => f.maKH === k.id);
-      if (list.length === 0) {
-        return '<p class="text-sm text-slate-400 text-center py-6">Chưa có Fanpage nào được gán</p>';
-      }
       const fpBadge = (s) => {
         const cfg = {
           active:     { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động' },
@@ -686,34 +723,81 @@
         }[s] || { bg: '#F1F5F9', color: '#64748B', label: s };
         return `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
       };
-      const rows = list.map((f) => `
-        <tr class="hover:bg-[#F0F4F4]">
-          <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${f.ten}</td>
-          <td class="px-3 py-2 text-slate-700 text-sm">${bmMap[f.maBM] || '—'}</td>
-          <td class="px-3 py-2 text-slate-700 text-sm">${formatNumber(f.followers)}</td>
-          <td class="px-3 py-2">${fpBadge(f.trangThai)}</td>
-          <td class="px-3 py-2 text-right">
-            <button onclick="confirmThuHoiFp('${f.ten}')" type="button"
-              class="px-2.5 py-1 text-xs font-medium text-[#EF4444] hover:bg-red-50 rounded transition flex items-center gap-1 ml-auto">
-              <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
-              Thu hồi
-            </button>
-          </td>
-        </tr>
-      `).join('');
-      return `
-        <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
-          <thead class="bg-[#F8FAFB] text-slate-600">
-            <tr>
-              <th class="text-left font-medium px-3 py-2">Tên Fanpage</th>
-              <th class="text-left font-medium px-3 py-2">BM</th>
-              <th class="text-left font-medium px-3 py-2">Followers</th>
-              <th class="text-left font-medium px-3 py-2">Trạng thái</th>
-              <th class="text-right font-medium px-3 py-2">Thao tác</th>
+
+      const dangThue = FANPAGE.filter((f) => f.maKH === k.id);
+      const ganThem = FANPAGE.filter((f) => !f.maKH);
+
+      const dangThueRows = dangThue.length === 0
+        ? `<tr><td colspan="5" class="text-center py-5 text-sm text-slate-400">Khách hàng này chưa thuê Fanpage nào</td></tr>`
+        : dangThue.map((f) => `
+            <tr class="hover:bg-[#F0F4F4]">
+              <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${f.ten}</td>
+              <td class="px-3 py-2 text-slate-700 text-sm">${bmMap[f.maBM] || '—'}</td>
+              <td class="px-3 py-2 text-slate-700 text-sm">${formatNumber(f.followers)}</td>
+              <td class="px-3 py-2">${fpBadge(f.trangThai)}</td>
+              <td class="px-3 py-2 text-right">
+                <button onclick="confirmThuHoiFp('${f.ten}')" type="button"
+                  class="px-2.5 py-1 text-xs font-medium text-[#EF4444] border border-[#EF4444] hover:bg-red-50 rounded transition inline-flex items-center gap-1">
+                  <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+                  Thu hồi
+                </button>
+              </td>
             </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">${rows}</tbody>
-        </table>
+          `).join('');
+
+      const ganThemRows = ganThem.length === 0
+        ? `<tr><td colspan="5" class="text-center py-5 text-sm text-slate-400">Không còn Fanpage trống để gán</td></tr>`
+        : ganThem.map((f) => `
+            <tr class="hover:bg-[#F0F4F4]">
+              <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${f.ten}</td>
+              <td class="px-3 py-2 text-slate-700 text-sm">${bmMap[f.maBM] || '—'}</td>
+              <td class="px-3 py-2 text-slate-700 text-sm">${formatNumber(f.followers)}</td>
+              <td class="px-3 py-2">${fpBadge(f.trangThai)}</td>
+              <td class="px-3 py-2 text-right">
+                <button onclick="assignFanpageToCurrentKh('${f.id}')" type="button"
+                  class="px-2.5 py-1 text-xs font-medium bg-[#21A691] hover:bg-[#1A8A78] text-white rounded transition inline-flex items-center gap-1">
+                  <i data-lucide="link" class="w-3.5 h-3.5"></i>
+                  Gán
+                </button>
+              </td>
+            </tr>
+          `).join('');
+
+      const tableHead = `
+        <thead class="bg-[#F8FAFB] text-slate-600">
+          <tr>
+            <th class="text-left font-medium px-3 py-2">Tên Fanpage</th>
+            <th class="text-left font-medium px-3 py-2">BM</th>
+            <th class="text-left font-medium px-3 py-2">Followers</th>
+            <th class="text-left font-medium px-3 py-2">Trạng thái</th>
+            <th class="text-right font-medium px-3 py-2 w-28">Thao tác</th>
+          </tr>
+        </thead>`;
+
+      return `
+        <section class="mb-5">
+          <div class="flex items-center gap-2 mb-2">
+            <h3 class="text-sm font-semibold text-slate-700">Đang thuê</h3>
+            <span class="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-xs font-semibold text-white rounded-full" style="background-color: #21A691;">${dangThue.length}</span>
+          </div>
+          <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+            ${tableHead}
+            <tbody class="divide-y divide-slate-100">${dangThueRows}</tbody>
+          </table>
+        </section>
+
+        <hr class="border-slate-200 my-4" />
+
+        <section>
+          <div class="flex items-center gap-2 mb-2">
+            <h3 class="text-sm font-semibold text-slate-700">Gán thêm</h3>
+            <span class="inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-xs font-semibold text-white rounded-full" style="background-color: #64748B;">${ganThem.length}</span>
+          </div>
+          <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+            ${tableHead}
+            <tbody class="divide-y divide-slate-100">${ganThemRows}</tbody>
+          </table>
+        </section>
       `;
     }
 
@@ -755,11 +839,11 @@
       if (cb) cb();
     });
 
-    // Giữ lại 2 hàm này cho modal Chi tiết KH (tab TKQC / Fanpage)
+    // Thu hồi / Gán — dùng cho modal Chi tiết KH (tab TKQC / Fanpage)
+    // BR-06 luôn yêu cầu khi thu hồi (Leader phải xác nhận không có chiến dịch đang chạy)
     function confirmThuHoiTkqc(tkqcTen) {
       const khTen = currentKh ? currentKh.ten : 'khách hàng này';
       const t = TKQC.find((x) => x.ten === tkqcTen);
-      const requireBR06 = !!(t && t.trangThai === 'active');
       showConfirm(
         'Thu hồi TKQC',
         `Xác nhận thu hồi ${tkqcTen} khỏi ${khTen}?`,
@@ -770,13 +854,12 @@
           renderTable();
           showToast(`Đã thu hồi ${tkqcTen}`);
         },
-        requireBR06
+        true
       );
     }
     function confirmThuHoiFp(fpTen) {
       const khTen = currentKh ? currentKh.ten : 'khách hàng này';
       const f = FANPAGE.find((x) => x.ten === fpTen);
-      const requireBR06 = !!(f && f.trangThai === 'active');
       showConfirm(
         'Thu hồi Fanpage',
         `Xác nhận thu hồi ${fpTen} khỏi ${khTen}?`,
@@ -787,8 +870,26 @@
           renderTable();
           showToast(`Đã thu hồi ${fpTen}`);
         },
-        requireBR06
+        true
       );
+    }
+    function assignTkqcToCurrentKh(tkqcId) {
+      const t = TKQC.find((x) => x.id === tkqcId);
+      if (!t || !currentKh) return;
+      t.maKH = currentKh.id;
+      currentKh.soTKQC = (currentKh.soTKQC || 0) + 1;
+      switchDetailTab('tkqc');
+      renderTable();
+      showToast(`Đã gán ${t.ten} cho ${currentKh.ten}`);
+    }
+    function assignFanpageToCurrentKh(fpId) {
+      const f = FANPAGE.find((x) => x.id === fpId);
+      if (!f || !currentKh) return;
+      f.maKH = currentKh.id;
+      currentKh.soFanpage = (currentKh.soFanpage || 0) + 1;
+      switchDetailTab('fanpage');
+      renderTable();
+      showToast(`Đã gán ${f.ten} cho ${currentKh.ten}`);
     }
 
     // 12. Đóng modal khi click overlay hoặc nhấn ESC

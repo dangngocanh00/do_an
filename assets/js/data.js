@@ -135,6 +135,47 @@ const TKQC = [
     hanMuc: 15000000,
     chiTieu: 8000000,
     ngayBatDauThue: '2026-04-10'
+  },
+  // TKQC trống — chưa gán cho KH nào (hiển thị trong phần "Gán thêm")
+  {
+    id: 'TKQC009',
+    ten: 'TKQC_009',
+    maKH: null,
+    trangThai: 'active',
+    soVIA: 3,
+    hanMuc: 40000000,
+    chiTieu: 0,
+    ngayBatDauThue: null
+  },
+  {
+    id: 'TKQC010',
+    ten: 'TKQC_010',
+    maKH: null,
+    trangThai: 'active',
+    soVIA: 4,
+    hanMuc: 60000000,
+    chiTieu: 0,
+    ngayBatDauThue: null
+  },
+  {
+    id: 'TKQC011',
+    ten: 'TKQC_011',
+    maKH: null,
+    trangThai: 'active',
+    soVIA: 2,
+    hanMuc: 20000000,
+    chiTieu: 0,
+    ngayBatDauThue: null
+  },
+  {
+    id: 'TKQC012',
+    ten: 'TKQC_012',
+    maKH: null,
+    trangThai: 'disabled',
+    soVIA: 1,
+    hanMuc: 10000000,
+    chiTieu: 0,
+    ngayBatDauThue: null
   }
 ];
 

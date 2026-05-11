@@ -87,17 +87,7 @@
         <!-- Phải: count + view toggle + export -->
         <div class="ml-auto flex items-center gap-3">
           <span id="total-count" class="text-sm text-slate-600 font-medium">Tổng: 0</span>
-          <!-- View toggle -->
-          <div class="flex border border-slate-200 rounded-lg overflow-hidden" role="group" aria-label="Chế độ hiển thị">
-            <button onclick="setView('list')" data-view-btn="list" type="button" title="Bảng"
-              class="px-2.5 py-2 transition">
-              <i data-lucide="list" class="w-4 h-4"></i>
-            </button>
-            <button onclick="setView('card')" data-view-btn="card" type="button" title="Thẻ"
-              class="px-2.5 py-2 transition border-l border-slate-200">
-              <i data-lucide="layout-grid" class="w-4 h-4"></i>
-            </button>
-          </div>
+          
           <!-- Export -->
           <button onclick="exportReport()" type="button"
             class="bg-white border border-[#21A691] text-[#21A691] hover:bg-[#21A691]/5 font-medium px-3 py-2 rounded-lg flex items-center gap-2 transition text-sm">

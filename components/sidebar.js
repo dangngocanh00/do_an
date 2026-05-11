@@ -19,8 +19,7 @@ const SIDEBAR_MENUS = {
     { label: 'Quản lý khách hàng', href: 'khachhang.html',  icon: 'briefcase' }
   ],
   khachhang: [
-    { label: 'Dashboard',          href: 'dashboard.html', icon: 'layout-dashboard' },
-    { label: 'Tài khoản của tôi', href: 'taikhoan.html',  icon: 'user-circle' }
+    { label: 'Dashboard',          href: 'dashboard.html', icon: 'layout-dashboard' }
   ]
 };
 
