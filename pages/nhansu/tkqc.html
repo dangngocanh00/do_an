@@ -98,7 +98,7 @@
                 <th class="text-left font-medium px-4 py-3">ID TKQC</th>
                 <th class="text-left font-medium px-4 py-3">Tên TKQC</th>
                 <th class="text-left font-medium px-4 py-3">Khách hàng</th>
-                <th class="text-left font-medium px-4 py-3">BM chứa</th>
+                <th class="text-left font-medium px-4 py-3">Ngày bắt đầu thuê</th>
                 <th class="text-left font-medium px-4 py-3">Hạn mức</th>
                 <th class="text-left font-medium px-4 py-3">Đã chi tiêu</th>
                 <th class="text-left font-medium px-4 py-3">Trạng thái</th>
@@ -130,8 +130,8 @@
           <!-- Banner cảnh báo (conditional) -->
           <div id="detail-banner" class="hidden"></div>
 
-          <!-- 3 ô thông tin -->
-          <div id="detail-info" class="grid grid-cols-1 sm:grid-cols-3 gap-4"></div>
+          <!-- 4 ô thông tin -->
+          <div id="detail-info" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
 
           <!-- Progress bar -->
           <div>
@@ -235,6 +235,11 @@
     function formatVND(n) {
       return Number(n).toLocaleString('vi-VN') + 'đ';
     }
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
     function daysUntil(dateStr) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -328,7 +333,7 @@
               <td class="px-4 py-3 text-sm font-mono text-slate-500">${t.id}</td>
               <td class="px-4 py-3 font-medium text-[#060D10]">${t.ten}</td>
               <td class="px-4 py-3 text-slate-700">${tenKH}</td>
-              <td class="px-4 py-3 text-slate-700">${bmListOfTkqc(t.id)}</td>
+              <td class="px-4 py-3 text-sm text-slate-600">${formatDate(t.ngayBatDauThue)}</td>
               <td class="px-4 py-3 text-slate-700">${formatVND(t.hanMuc)}</td>
               <td class="px-4 py-3">
                 <div class="text-sm text-slate-700">${formatVND(t.chiTieu)}</div>
@@ -381,11 +386,12 @@
       // Banner cảnh báo
       renderDetailBanner(t);
 
-      // 3 ô info
+      // 4 ô info
       const info = [
-        { label: 'Khách hàng',  value: khMap[t.maKH] || '—' },
-        { label: 'Hạn mức',     value: formatVND(t.hanMuc) },
-        { label: 'Đã chi tiêu', value: formatVND(t.chiTieu) }
+        { label: 'Khách hàng',        value: khMap[t.maKH] || '—' },
+        { label: 'Ngày bắt đầu thuê', value: formatDate(t.ngayBatDauThue) },
+        { label: 'Hạn mức',           value: formatVND(t.hanMuc) },
+        { label: 'Đã chi tiêu',       value: formatVND(t.chiTieu) }
       ];
       document.getElementById('detail-info').innerHTML = info.map((it) => `
         <div class="bg-[#F8FAFB] border border-slate-200 rounded-lg p-3">

@@ -8,7 +8,7 @@ const SIDEBAR_MENUS = {
     { label: 'Quản lý TKQC',    href: 'tkqc.html',       icon: 'credit-card' },
     { label: 'Quản lý Fanpage', href: 'fanpage.html',    icon: 'flag' },
     { label: 'Quản lý BM',      href: 'bm.html',         icon: 'building-2' },
-    { label: 'Khách hàng',      href: 'khachhang.html',  icon: 'briefcase' },
+    { label: 'Quản lý Khách hàng', href: 'khachhang.html',  icon: 'briefcase' },
     { label: 'Nhật ký',         href: 'nhatky.html',     icon: 'scroll-text' },
     { label: 'Cài đặt',         href: 'caidat.html',     icon: 'settings' }
   ],

@@ -117,25 +117,22 @@
                 <th class="text-left font-medium px-4 py-3">ID Fanpage</th>
                 <th class="text-left font-medium px-4 py-3">Tên Fanpage</th>
                 <th class="text-left font-medium px-4 py-3">Khách hàng</th>
-                <th class="text-left font-medium px-4 py-3">BM</th>
                 <th class="text-left font-medium px-4 py-3">Followers</th>
                 <th class="text-left font-medium px-4 py-3">Trạng thái</th>
                 <th class="text-left font-medium px-4 py-3">Đồng bộ lần cuối</th>
-                <th class="text-right font-medium px-4 py-3">Thao tác</th>
               </tr>
             </thead>
             <tbody id="fp-tbody" class="divide-y divide-slate-100"></tbody>
           </table>
         </div>
+        <div id="pagination"></div>
       </section>
 
       <!-- 6. Card view -->
       <section id="view-card" class="hidden">
         <div id="fp-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        <div id="card-pagination" class="bg-white rounded-xl border border-slate-200 mt-3"></div>
       </section>
-
-      <!-- Pagination dùng chung — số item/trang đổi theo view (list 10, card 6) -->
-      <div id="pagination" class="bg-white rounded-xl border border-slate-200 mt-3"></div>
 
     </div>
   </main>
@@ -157,8 +154,8 @@
           <!-- Banner cảnh báo (conditional) -->
           <div id="detail-banner" class="hidden"></div>
 
-          <!-- 4 ô thông tin -->
-          <div id="detail-info" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+          <!-- 3 ô thông tin -->
+          <div id="detail-info" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
 
           <!-- VIA cầm quyền -->
           <div>
@@ -412,7 +409,8 @@
         renderCard(pageInfo.items);
       }
 
-      renderPagination('pagination', pageInfo, (newPage) => {
+      const paginationId = currentView === 'list' ? 'pagination' : 'card-pagination';
+      renderPagination(paginationId, pageInfo, (newPage) => {
         currentPage = newPage;
         renderCurrentView();
         const target = currentView === 'list' ? tbody.closest('section') : cardsContainer.closest('section');
@@ -424,7 +422,7 @@
     function renderList(filtered) {
       if (filtered.length === 0) {
         tbody.innerHTML = `
-          <tr><td colspan="9" class="text-center py-10 text-slate-400 text-sm">
+          <tr><td colspan="7" class="text-center py-10 text-slate-400 text-sm">
             <div class="flex flex-col items-center gap-2">
               <i data-lucide="search-x" class="w-8 h-8 text-slate-300"></i>
               Không tìm thấy Fanpage phù hợp
@@ -432,27 +430,22 @@
           </td></tr>`;
         return;
       }
+      const ipp = 10;
       tbody.innerHTML = filtered.map((f, idx) => {
         const tenKH = khMap[f.maKH] || '—';
-        const tenBM = bmMap[f.maBM] || '—';
+        const stt = (currentPage - 1) * ipp + idx + 1;
+        const isRestricted = f.trangThai === 'restricted';
+        const isDisabled = f.trangThai === 'disabled';
+        const rowClass = isDisabled ? 'bg-red-50' : isRestricted ? 'bg-yellow-50' : '';
         return `
-          <tr class="hover:bg-[#F0F4F4]">
-            <td class="px-4 py-3 text-slate-500">${idx + 1}</td>
+          <tr onclick="openDetailModal('${f.id}')" class="${rowClass} hover:bg-[#F0F4F4] cursor-pointer">
+            <td class="px-4 py-3 text-slate-500">${stt}</td>
             <td class="px-4 py-3 text-sm font-mono text-slate-500">${f.id}</td>
             <td class="px-4 py-3 font-medium text-[#060D10]">${f.ten}</td>
             <td class="px-4 py-3 text-slate-700">${tenKH}</td>
-            <td class="px-4 py-3 text-slate-700">${tenBM}</td>
             <td class="px-4 py-3 text-slate-700">${formatNumber(f.followers)}</td>
             <td class="px-4 py-3">${statusBadge(f.trangThai)}</td>
             <td class="px-4 py-3 text-slate-500 text-xs">${f.dongBoLanCuoi}</td>
-            <td class="px-4 py-3">
-              <div class="flex items-center justify-end">
-                <button onclick="openDetailModal('${f.id}')" type="button" title="Chi tiết"
-                  class="p-1.5 rounded text-slate-500 hover:text-[#21A691] hover:bg-slate-100 transition">
-                  <i data-lucide="eye" class="w-4 h-4"></i>
-                </button>
-              </div>
-            </td>
           </tr>
         `;
       }).join('');
@@ -555,7 +548,6 @@
       // 4 ô info
       const info = [
         { label: 'Khách hàng',       value: khMap[f.maKH] || '—' },
-        { label: 'BM chứa',          value: bmMap[f.maBM] || '—' },
         { label: 'Followers',        value: formatNumber(f.followers) },
         { label: 'Đồng bộ lần cuối', value: f.dongBoLanCuoi }
       ];

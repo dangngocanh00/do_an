@@ -12,12 +12,6 @@
   <style>
     body { font-family: 'Inter', sans-serif; background: #F0F4F4; color: #060D10; }
     table tbody tr { transition: background-color 0.15s ease; }
-    .kh-card { transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease; }
-    .kh-card:hover {
-      box-shadow: 0 8px 24px -8px rgba(33, 166, 145, 0.25);
-      border-color: #21A691;
-      transform: translateY(-2px);
-    }
     @keyframes modalIn {
       from { opacity: 0; transform: scale(0.96); }
       to   { opacity: 1; transform: scale(1); }
@@ -90,10 +84,26 @@
         </div>
       </div>
 
-      <!-- 4. Card grid 2 cột -->
-      <div id="kh-cards" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
-      <!-- Pagination cho card grid -->
-      <div id="pagination" class="bg-white rounded-xl border border-slate-200 mt-3"></div>
+      <!-- 4. Bảng danh sách khách hàng -->
+      <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-[#F8FAFB] text-slate-600">
+              <tr>
+                <th class="text-left font-medium px-4 py-3 w-12">STT</th>
+                <th class="text-left font-medium px-4 py-3">Tên khách hàng</th>
+                <th class="text-left font-medium px-4 py-3">Số TKQC</th>
+                <th class="text-left font-medium px-4 py-3">Số Fanpage</th>
+                <th class="text-left font-medium px-4 py-3">Nhân sự phụ trách</th>
+                <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                <th class="w-12 px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody id="kh-tbody" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+        <div id="pagination"></div>
+      </section>
 
     </div>
   </main>
@@ -186,6 +196,7 @@
 
     // Lookup
     const bmMap = Object.fromEntries(BM.map((b) => [b.id, b.ten]));
+    const nhanSuMap = Object.fromEntries(NHAN_SU.map((ns) => [ns.email, ns.ten]));
 
     // 3. Helpers
     function refreshIcons() {
@@ -284,15 +295,15 @@
       `).join('');
     })();
 
-    // 5. Render card grid theo filter + phân trang 6/page
-    const cardsContainer = document.getElementById('kh-cards');
+    // 5. Render bảng theo filter + phân trang 10/page
+    const tbody = document.getElementById('kh-tbody');
     const totalCountEl = document.getElementById('total-count');
     const searchInput = document.getElementById('search-input');
     const filterStatus = document.getElementById('filter-status');
-    const ITEMS_PER_PAGE = 6;
+    const ITEMS_PER_PAGE = 10;
     let currentPage = 1;
 
-    function renderCards() {
+    function renderTable() {
       const search = searchInput.value.toLowerCase().trim();
       const status = filterStatus.value;
 
@@ -308,65 +319,34 @@
       totalCountEl.textContent = `Tổng: ${pageInfo.total} KH`;
 
       if (pageInfo.total === 0) {
-        cardsContainer.innerHTML = `
-          <div class="col-span-full bg-white rounded-xl border border-slate-200 py-10 text-center text-slate-400 text-sm">
-            <i data-lucide="search-x" class="w-8 h-8 text-slate-300 mx-auto mb-2"></i>
-            Không tìm thấy khách hàng phù hợp
-          </div>`;
-      } else {
-        cardsContainer.innerHTML = pageInfo.items.map((k) => {
-          const tkqcCount = getKhTKQCs(k.id).length;
-          const fpCount = getKhFanpages(k.id).length;
-          const viaTotal = getKhViaTotal(k.id);
-          const alertCount = getKhAlerts(k.id).length;
-          const alertColor = alertCount > 0 ? '#EF4444' : '#64748B';
-          const initial = k.ten.charAt(0).toUpperCase();
-
-          return `
-            <div class="kh-card bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-              <!-- Header -->
-              <div class="flex items-start justify-between gap-3 mb-4 pb-4 border-b border-slate-100">
-                <div class="flex items-center gap-3 flex-1 min-w-0">
-                  <div class="w-12 h-12 rounded-full bg-[#21A691] text-white flex items-center justify-center text-lg font-bold flex-shrink-0">
-                    ${initial}
-                  </div>
-                  <div class="flex-1 min-w-0">
-                    <h3 class="text-lg font-bold text-[#060D10] truncate">${k.ten}</h3>
-                    <p class="text-xs text-slate-400">${k.id}</p>
-                  </div>
-                </div>
-                ${khStatusBadge(k.trangThai)}
-              </div>
-              <!-- Body 2 cột -->
-              <div class="grid grid-cols-2 gap-3 mb-4 text-sm">
-                <div class="space-y-2">
-                  <div class="flex items-center gap-2 text-slate-700">
-                    <i data-lucide="credit-card" class="w-4 h-4 text-slate-400" stroke-width="1.5"></i>
-                    <span>TKQC: <span class="font-semibold text-[#060D10]">${tkqcCount}</span></span>
-                  </div>
-                  <div class="flex items-center gap-2 text-slate-700">
-                    <i data-lucide="flag" class="w-4 h-4 text-slate-400" stroke-width="1.5"></i>
-                    <span>Fanpage: <span class="font-semibold text-[#060D10]">${fpCount}</span></span>
-                  </div>
-                </div>
-                <div class="space-y-2">
-                  <div class="flex items-center gap-2 text-slate-700">
-                    <i data-lucide="users" class="w-4 h-4 text-slate-400" stroke-width="1.5"></i>
-                    <span>VIA phục vụ: <span class="font-semibold text-[#060D10]">${viaTotal}</span></span>
-                  </div>
-                  <div class="flex items-center gap-2" style="color: ${alertColor};">
-                    <i data-lucide="alert-triangle" class="w-4 h-4" stroke-width="1.5"></i>
-                    <span>Cảnh báo: <span class="font-semibold">${alertCount}</span></span>
-                  </div>
-                </div>
-              </div>
-              <!-- Footer -->
-              <button onclick="openDetailModal('${k.id}')" type="button"
-                class="w-full bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium py-2 rounded-lg flex items-center justify-center gap-1.5 transition shadow-sm">
-                <i data-lucide="eye" class="w-4 h-4"></i>
-                Xem chi tiết
-              </button>
+        tbody.innerHTML = `
+          <tr><td colspan="7" class="text-center py-10 text-slate-400 text-sm">
+            <div class="flex flex-col items-center gap-2">
+              <i data-lucide="search-x" class="w-8 h-8 text-slate-300"></i>
+              Không tìm thấy khách hàng phù hợp
             </div>
+          </td></tr>`;
+      } else {
+        tbody.innerHTML = pageInfo.items.map((k, idx) => {
+          const tkqcCount = TKQC.filter((t) => t.maKH === k.id).length;
+          const fpCount = FANPAGE.filter((f) => f.maKH === k.id).length;
+          const nhanSuName = nhanSuMap[k.nhanSuPhuTrach] || k.nhanSuPhuTrach;
+          const stt = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
+          return `
+            <tr onclick="openDetailModal('${k.id}')" class="hover:bg-[#F0F4F4] cursor-pointer">
+              <td class="px-4 py-3 text-slate-500">${stt}</td>
+              <td class="px-4 py-3 font-medium text-[#060D10]">${k.ten}</td>
+              <td class="px-4 py-3 text-slate-700">${tkqcCount}</td>
+              <td class="px-4 py-3 text-slate-700">${fpCount}</td>
+              <td class="px-4 py-3 text-slate-700">${nhanSuName}</td>
+              <td class="px-4 py-3">${khStatusBadge(k.trangThai)}</td>
+              <td class="px-4 py-3 text-center">
+                <button onclick="event.stopPropagation(); openDetailModal('${k.id}')" type="button" title="Xem chi tiết"
+                  class="p-1.5 rounded text-slate-400 hover:text-[#21A691] hover:bg-slate-100 transition">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                </button>
+              </td>
+            </tr>
           `;
         }).join('');
       }
@@ -374,14 +354,15 @@
 
       renderPagination('pagination', pageInfo, (newPage) => {
         currentPage = newPage;
-        renderCards();
-        if (cardsContainer) cardsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        renderTable();
+        const tableSection = tbody.closest('section');
+        if (tableSection) tableSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     }
 
-    searchInput.addEventListener('input', () => { currentPage = 1; renderCards(); });
-    filterStatus.addEventListener('change', () => { currentPage = 1; renderCards(); });
-    renderCards();
+    searchInput.addEventListener('input', () => { currentPage = 1; renderTable(); });
+    filterStatus.addEventListener('change', () => { currentPage = 1; renderTable(); });
+    renderTable();
 
     // 6. Toast
     function showToast(message, type = 'success') {
@@ -578,7 +559,6 @@
         return `
           <tr class="${rowBg}">
             <td class="px-3 py-2 font-medium text-[#060D10] text-sm">${f.ten}</td>
-            <td class="px-3 py-2 text-slate-700 text-sm">${bmMap[f.maBM] || '—'}</td>
             <td class="px-3 py-2 text-slate-700 text-sm">${formatNumber(f.followers)}</td>
             <td class="px-3 py-2">${viaCell}</td>
             <td class="px-3 py-2">${fpStatusBadge(f.trangThai)}</td>
@@ -590,7 +570,6 @@
           <thead class="bg-[#F8FAFB] text-slate-600">
             <tr>
               <th class="text-left font-medium px-3 py-2">Tên Fanpage</th>
-              <th class="text-left font-medium px-3 py-2">BM</th>
               <th class="text-left font-medium px-3 py-2">Followers</th>
               <th class="text-left font-medium px-3 py-2">VIA</th>
               <th class="text-left font-medium px-3 py-2">Trạng thái</th>

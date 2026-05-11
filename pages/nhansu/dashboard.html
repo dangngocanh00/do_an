@@ -110,6 +110,7 @@
                 <tr>
                   <th class="text-left font-medium px-6 py-3">Tên TKQC</th>
                   <th class="text-left font-medium px-6 py-3">Khách hàng</th>
+                  <th class="text-left font-medium px-6 py-3">Ngày bắt đầu thuê</th>
                   <th class="text-left font-medium px-6 py-3">Trạng thái</th>
                 </tr>
               </thead>
@@ -334,6 +335,11 @@
     function refreshIcons() {
       if (window.lucide && typeof lucide.createIcons === 'function') lucide.createIcons();
     }
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
     function showToast(message, type = 'success') {
       const toast = document.getElementById('toast');
       const icon = document.getElementById('toast-icon');
@@ -460,7 +466,7 @@
       const tbody = document.getElementById('tkqc-tbody');
       const items = myTKQCs.slice(0, 5);
       if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" class="text-center py-6 text-slate-400 text-sm">Chưa có TKQC</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-sm">Chưa có TKQC</td></tr>`;
         return;
       }
       tbody.innerHTML = items.map((t) => {
@@ -476,6 +482,7 @@
           <tr class="${rowBg} hover:bg-[#F0F4F4]">
             <td class="px-6 py-3 font-medium ${nameText}">${t.ten}</td>
             <td class="px-6 py-3 ${cellText}">${khMap[t.maKH] || '—'}</td>
+            <td class="px-6 py-3 ${cellText}">${formatDate(t.ngayBatDauThue)}</td>
             <td class="px-6 py-3">${trangThai}</td>
           </tr>
         `;

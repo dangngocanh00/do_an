@@ -63,7 +63,8 @@ const TKQC = [
     trangThai: 'active',
     soVIA: 5,
     hanMuc: 50000000,
-    chiTieu: 32000000
+    chiTieu: 32000000,
+    ngayBatDauThue: '2026-03-01'
   },
   {
     id: 'TKQC002',
@@ -72,7 +73,8 @@ const TKQC = [
     trangThai: 'active',
     soVIA: 4,
     hanMuc: 30000000,
-    chiTieu: 28000000
+    chiTieu: 28000000,
+    ngayBatDauThue: '2026-03-01'
   },
   {
     id: 'TKQC003',
@@ -81,7 +83,8 @@ const TKQC = [
     trangThai: 'disabled',
     soVIA: 2,
     hanMuc: 20000000,
-    chiTieu: 0
+    chiTieu: 0,
+    ngayBatDauThue: '2026-02-15'
   },
   {
     id: 'TKQC004',
@@ -90,7 +93,8 @@ const TKQC = [
     trangThai: 'active',
     soVIA: 3,
     hanMuc: 40000000,
-    chiTieu: 15000000
+    chiTieu: 15000000,
+    ngayBatDauThue: '2026-03-10'
   },
   {
     id: 'TKQC005',
@@ -99,7 +103,8 @@ const TKQC = [
     trangThai: 'active',
     soVIA: 1,
     hanMuc: 25000000,
-    chiTieu: 10000000
+    chiTieu: 10000000,
+    ngayBatDauThue: '2026-04-01'
   },
   {
     id: 'TKQC006',
@@ -108,7 +113,8 @@ const TKQC = [
     trangThai: 'active',
     soVIA: 6,
     hanMuc: 60000000,
-    chiTieu: 45000000
+    chiTieu: 45000000,
+    ngayBatDauThue: '2026-04-01'
   },
   {
     id: 'TKQC007',
@@ -117,7 +123,8 @@ const TKQC = [
     trangThai: 'active',
     soVIA: 4,
     hanMuc: 35000000,
-    chiTieu: 20000000
+    chiTieu: 20000000,
+    ngayBatDauThue: '2026-03-20'
   },
   {
     id: 'TKQC008',
@@ -126,7 +133,8 @@ const TKQC = [
     trangThai: 'active',
     soVIA: 2,
     hanMuc: 15000000,
-    chiTieu: 8000000
+    chiTieu: 8000000,
+    ngayBatDauThue: '2026-04-10'
   }
 ];
 

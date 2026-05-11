@@ -17,14 +17,19 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .toast-show { animation: toastIn 220ms ease-out; }
+    .custom-scroll::-webkit-scrollbar { width: 4px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #F0F4F4; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #21A691; border-radius: 4px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #1A8A78; }
+    .modal-scroll::-webkit-scrollbar { width: 4px; }
+    .modal-scroll::-webkit-scrollbar-track { background: #F8FAFC; }
+    .modal-scroll::-webkit-scrollbar-thumb { background: #21A691; border-radius: 4px; }
   </style>
 </head>
 <body class="bg-[#F0F4F4]">
-  <!-- Sidebar -->
-  <div id="sidebar"></div>
 
   <!-- Header dùng chung -->
-  <header class="fixed top-0 left-60 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
+  <header class="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-20 flex items-center justify-between px-6 transition-all duration-300">
     <div class="flex items-center gap-2">
       <span class="text-xl font-bold text-[#21A691]">TN Manager</span>
     </div>
@@ -39,7 +44,7 @@
   </header>
 
   <!-- Main content -->
-  <main class="ml-60 pt-16 min-h-screen transition-all duration-300">
+  <main class="ml-0 pt-16 min-h-screen transition-all duration-300">
     <div class="max-w-screen-xl mx-auto px-6 py-6">
 
       <!-- 1. Page header -->
@@ -64,59 +69,146 @@
       <!-- 3. Stats mini -->
       <div id="stats-mini" class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6"></div>
 
-      <!-- 4. Grid 2 cột: TKQC + Fanpage -->
+      <!-- 4. Thông tin tài khoản -->
+      <section id="account-info" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6"></section>
+
+      <!-- 5. Grid 2 cột: TKQC + Fanpage -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
         <!-- TKQC -->
         <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="px-6 py-4 border-b border-slate-200">
-            <h2 class="text-base font-semibold text-[#060D10]">TKQC của tôi</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Tài khoản quảng cáo đang được agency vận hành</p>
+          <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-semibold text-[#060D10]">TKQC của tôi</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Tài khoản quảng cáo đang được agency vận hành</p>
+            </div>
+            <button onclick="openTkqcModal()" type="button"
+              class="text-sm text-[#21A691] font-medium hover:underline flex-shrink-0">
+              Xem tất cả
+            </button>
           </div>
           <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="bg-[#F8FAFB] text-slate-600">
-                <tr>
-                  <th class="text-left font-medium px-4 py-3">Tên TKQC</th>
-                  <th class="text-left font-medium px-4 py-3">Hạn mức</th>
-                  <th class="text-left font-medium px-4 py-3">Đã chi tiêu</th>
-                  <th class="text-left font-medium px-4 py-3">Trạng thái</th>
-                  <th class="text-left font-medium px-4 py-3">Đồng bộ</th>
-                </tr>
-              </thead>
-              <tbody id="tkqc-tbody" class="divide-y divide-slate-100"></tbody>
-            </table>
+            <div class="overflow-y-auto max-h-[280px] custom-scroll">
+              <table class="w-full text-sm">
+                <thead class="bg-[#F8FAFB] text-slate-600 sticky top-0 z-10">
+                  <tr>
+                    <th class="text-left font-medium px-4 py-3">Tên TKQC</th>
+                    <th class="text-left font-medium px-4 py-3">Ngày bắt đầu thuê</th>
+                    <th class="text-left font-medium px-4 py-3">Hạn mức</th>
+                    <th class="text-left font-medium px-4 py-3">Đã chi tiêu</th>
+                    <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody id="tkqc-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
           </div>
         </section>
 
         <!-- Fanpage -->
         <section class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div class="px-6 py-4 border-b border-slate-200">
-            <h2 class="text-base font-semibold text-[#060D10]">Fanpage của tôi</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Fanpage đang được agency quản lý</p>
+          <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-semibold text-[#060D10]">Fanpage của tôi</h2>
+              <p class="text-xs text-slate-500 mt-0.5">Fanpage đang được agency quản lý</p>
+            </div>
+            <button onclick="openFpModal()" type="button"
+              class="text-sm text-[#21A691] font-medium hover:underline flex-shrink-0">
+              Xem tất cả
+            </button>
           </div>
           <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="bg-[#F8FAFB] text-slate-600">
-                <tr>
-                  <th class="text-left font-medium px-4 py-3">Tên Fanpage</th>
-                  <th class="text-left font-medium px-4 py-3">Followers</th>
-                  <th class="text-left font-medium px-4 py-3">Trạng thái</th>
-                  <th class="text-left font-medium px-4 py-3">Đồng bộ</th>
-                </tr>
-              </thead>
-              <tbody id="fp-tbody" class="divide-y divide-slate-100"></tbody>
-            </table>
+            <div class="overflow-y-auto max-h-[280px] custom-scroll">
+              <table class="w-full text-sm">
+                <thead class="bg-[#F8FAFB] text-slate-600 sticky top-0 z-10">
+                  <tr>
+                    <th class="text-left font-medium px-4 py-3">Tên Fanpage</th>
+                    <th class="text-left font-medium px-4 py-3">Followers</th>
+                    <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody id="fp-tbody" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
           </div>
         </section>
+
       </div>
 
-      <!-- 5. Footer info — Nhân sự phụ trách -->
-      <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-        <div id="ns-info" class="flex items-center gap-4"></div>
-      </section>
+      <!-- 6. Liên hệ hỗ trợ -->
+      <section id="support-section" class="bg-white border border-slate-200 border-l-4 border-l-[#21A691] rounded-xl p-5"></section>
 
     </div>
   </main>
+
+  <!-- Modal Xem tất cả TKQC -->
+  <div id="modal-tkqc" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40" onclick="closeTkqcModal()"></div>
+    <div class="relative bg-white rounded-xl shadow-xl w-[800px] max-w-[90vw] h-[600px] flex flex-col z-10">
+      <!-- Header cố định -->
+      <div class="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <h3 class="text-base font-semibold text-[#060D10]">Tất cả TKQC đang thuê</h3>
+        <button onclick="closeTkqcModal()" type="button"
+          class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <!-- Body scroll -->
+      <div id="modal-tkqc-body" class="flex-1 overflow-y-auto modal-scroll">
+        <table class="w-full text-sm">
+          <thead class="bg-[#F8FAFB] text-slate-600 sticky top-0 z-10">
+            <tr>
+              <th class="text-left font-medium px-4 py-3 w-12">STT</th>
+              <th class="text-left font-medium px-4 py-3">Tên TKQC</th>
+              <th class="text-left font-medium px-4 py-3">Ngày bắt đầu thuê</th>
+              <th class="text-left font-medium px-4 py-3">Hạn mức</th>
+              <th class="text-left font-medium px-4 py-3">Đã chi tiêu</th>
+              <th class="text-left font-medium px-4 py-3 min-w-[160px]">Tiến độ</th>
+              <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody id="modal-tkqc-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <!-- Footer pagination -->
+      <div class="shrink-0">
+        <div id="modal-tkqc-pagination"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Xem tất cả Fanpage -->
+  <div id="modal-fp" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/40" onclick="closeFpModal()"></div>
+    <div class="relative bg-white rounded-xl shadow-xl w-[800px] max-w-[90vw] h-[600px] flex flex-col z-10">
+      <!-- Header cố định -->
+      <div class="shrink-0 flex items-center justify-between px-6 py-4 border-b border-slate-200">
+        <h3 class="text-base font-semibold text-[#060D10]">Tất cả Fanpage đang thuê</h3>
+        <button onclick="closeFpModal()" type="button"
+          class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <!-- Body scroll -->
+      <div id="modal-fp-body" class="flex-1 overflow-y-auto modal-scroll">
+        <table class="w-full text-sm">
+          <thead class="bg-[#F8FAFB] text-slate-600 sticky top-0 z-10">
+            <tr>
+              <th class="text-left font-medium px-4 py-3 w-12">STT</th>
+              <th class="text-left font-medium px-4 py-3">Tên Fanpage</th>
+              <th class="text-left font-medium px-4 py-3">Followers</th>
+              <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody id="modal-fp-tbody" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+      <!-- Footer pagination -->
+      <div class="shrink-0">
+        <div id="modal-fp-pagination"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast -->
   <div id="toast" class="hidden fixed bottom-6 right-6 bg-white border border-slate-200 shadow-lg rounded-lg px-4 py-3 z-[60] flex items-center gap-2">
@@ -127,12 +219,11 @@
   <!-- Scripts -->
   <script src="../../assets/js/auth.js"></script>
   <script src="../../assets/js/data.js"></script>
-  <script src="../../components/sidebar.js"></script>
+  <script src="../../assets/js/pagination.js"></script>
 
   <script>
-    // 0. Bảo vệ + sidebar
+    // 0. Bảo vệ role — KH không cần sidebar
     checkAuth('khachhang');
-    renderSidebar('khachhang');
 
     // 1. Helpers
     function refreshIcons() {
@@ -140,6 +231,11 @@
     }
     function formatNumber(n) { return Number(n).toLocaleString('vi-VN'); }
     function formatVND(n) { return Number(n).toLocaleString('vi-VN') + 'đ'; }
+    function formatDate(dateStr) {
+      if (!dateStr) return '—';
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
     function progressColor(pct) {
       if (pct >= 90) return '#EF4444';
       if (pct >= 70) return '#F59E0B';
@@ -147,14 +243,12 @@
     }
 
     // 2. Xác định KH đang đăng nhập
-    // Demo: user.name khớp với tên trong KHACH_HANG (kh@agency.com → "Công ty ABC" → KH001)
     const user = getCurrentUser();
     const myKH = KHACH_HANG.find((k) => k.ten === user.name) || KHACH_HANG[0];
 
     // 3. Lọc data theo maKH
     const MY_TKQC = TKQC.filter((t) => t.maKH === myKH.id);
     const MY_FANPAGE = FANPAGE.filter((f) => f.maKH === myKH.id);
-    // Cảnh báo liên quan: taiSan match TKQC/Fanpage thuộc KH này
     const myTkqcTens = new Set(MY_TKQC.map((t) => t.ten));
     const myFpTens = new Set(MY_FANPAGE.map((f) => f.ten));
     const MY_ALERTS = CANH_BAO.filter((cb) =>
@@ -163,7 +257,8 @@
 
     // Lookup
     const nsByEmail = Object.fromEntries(NHAN_SU.map((n) => [n.email, n]));
-    // Mock đồng bộ lần cuối cho TKQC (data.js không có field này)
+    const myNS = nsByEmail[myKH.nhanSuPhuTrach];
+
     const TKQC_LAST_SYNC = {
       TKQC001: '5 phút trước',
       TKQC002: '15 phút trước',
@@ -175,7 +270,7 @@
       TKQC008: '30 phút trước'
     };
 
-    // 4. Render header user (tên KH + avatar) — KH role không có bell
+    // 4. Render header user
     (function renderHeaderUser() {
       document.getElementById('header-user').innerHTML = `
         <span class="text-sm font-medium text-slate-700 hidden sm:inline">${user.name}</span>
@@ -204,21 +299,20 @@
       }[trangThai] || { bg: '#F1F5F9', color: '#64748B', label: trangThai };
       return `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
     }
-    function alertLevelBadge(mucDo) {
+    function khStatusBadge(trangThai) {
       const cfg = {
-        cao:        { color: '#EF4444', label: 'Cao' },
-        trung_binh: { color: '#F59E0B', label: 'Trung bình' },
-        thap:       { color: '#21A691', label: 'Thấp' }
-      }[mucDo] || { color: '#64748B', label: mucDo };
-      return `<span class="text-xs font-medium px-2 py-0.5 rounded" style="background-color: #F1F5F9; color: ${cfg.color};">${cfg.label}</span>`;
+        active: { bg: '#D1FAE5', color: '#21A691', label: 'Hoạt động' },
+        paused: { bg: '#FEF3C7', color: '#F59E0B', label: 'Tạm ngưng' }
+      }[trangThai] || { bg: '#F1F5F9', color: '#64748B', label: trangThai };
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: ${cfg.bg}; color: ${cfg.color};">${cfg.label}</span>`;
     }
 
     // 7. Stats mini
     (function renderStatsMini() {
       const cards = [
-        { num: MY_TKQC.length,    label: 'TKQC đang dùng',     icon: 'credit-card', color: '#21A691', numColor: '#21A691' },
-        { num: MY_FANPAGE.length, label: 'Fanpage đang dùng',  icon: 'flag',        color: '#21A691', numColor: '#21A691' },
-        { num: MY_ALERTS.length,  label: 'Cảnh báo liên quan', icon: 'bell',        color: '#EF4444', numColor: '#EF4444' }
+        { num: MY_TKQC.length,    label: 'TKQC đang dùng',     icon: 'credit-card', color: '#21A691' },
+        { num: MY_FANPAGE.length, label: 'Fanpage đang dùng',  icon: 'flag',        color: '#21A691' },
+        { num: MY_ALERTS.length,  label: 'Cảnh báo liên quan', icon: 'bell',        color: '#EF4444' }
       ];
       document.getElementById('stats-mini').innerHTML = cards.map((c) => `
         <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center gap-3 shadow-sm">
@@ -226,14 +320,54 @@
             <i data-lucide="${c.icon}" class="w-5 h-5"></i>
           </div>
           <div>
-            <div class="text-2xl font-bold" style="color: ${c.numColor};">${c.num}</div>
+            <div class="text-2xl font-bold" style="color: ${c.color};">${c.num}</div>
             <div class="text-xs text-slate-500">${c.label}</div>
           </div>
         </div>
       `).join('');
     })();
 
-    // 8. Render bảng TKQC (read-only, không hiện VIA hay thao tác)
+    // 8. Thông tin tài khoản
+    (function renderAccountInfo() {
+      const initial = myKH.ten.charAt(0).toUpperCase();
+      const nsName = myNS ? myNS.ten : '—';
+      const nsEmail = myNS ? myNS.email : myKH.nhanSuPhuTrach;
+      document.getElementById('account-info').innerHTML = `
+        <div class="flex items-start gap-5 flex-wrap">
+          <div class="w-16 h-16 rounded-full bg-[#21A691] text-white flex items-center justify-center text-2xl font-bold flex-shrink-0 shadow-sm">
+            ${initial}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 mb-1 flex-wrap">
+              <h2 class="text-xl font-bold text-[#060D10]">${myKH.ten}</h2>
+              <span class="inline-flex px-3 py-0.5 rounded-full text-xs font-medium text-white" style="background-color: #27403E;">
+                Khách hàng
+              </span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2 mt-3">
+              <div class="flex items-center gap-2 text-sm">
+                <i data-lucide="user-circle" class="w-4 h-4 text-slate-400 flex-shrink-0" stroke-width="1.5"></i>
+                <span class="text-slate-500">Nhân sự phụ trách:</span>
+                <span class="font-medium text-[#060D10] truncate">${nsName}</span>
+              </div>
+              <div class="flex items-center gap-2 text-sm">
+                <i data-lucide="mail" class="w-4 h-4 text-slate-400 flex-shrink-0" stroke-width="1.5"></i>
+                <span class="text-slate-500">Email NS:</span>
+                <span class="font-medium text-[#060D10] truncate">${nsEmail}</span>
+              </div>
+              <div class="flex items-center gap-2 text-sm">
+                <i data-lucide="check-circle" class="w-4 h-4 text-slate-400 flex-shrink-0" stroke-width="1.5"></i>
+                <span class="text-slate-500">Trạng thái:</span>
+                ${khStatusBadge(myKH.trangThai)}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      refreshIcons();
+    })();
+
+    // 9. Render bảng TKQC (có scroll)
     (function renderTKQC() {
       const tbody = document.getElementById('tkqc-tbody');
       if (MY_TKQC.length === 0) {
@@ -246,6 +380,7 @@
         return `
           <tr class="hover:bg-[#F0F4F4]">
             <td class="px-4 py-3 font-medium text-[#060D10]">${t.ten}</td>
+            <td class="px-4 py-3 text-sm text-slate-600">${formatDate(t.ngayBatDauThue)}</td>
             <td class="px-4 py-3 text-slate-700">${formatVND(t.hanMuc)}</td>
             <td class="px-4 py-3">
               <div class="text-sm text-slate-700">${formatVND(t.chiTieu)}</div>
@@ -255,17 +390,16 @@
               <div class="text-[11px] text-slate-400 mt-0.5">${pct.toFixed(0)}% / hạn mức</div>
             </td>
             <td class="px-4 py-3">${tkqcStatusBadge(t.trangThai)}</td>
-            <td class="px-4 py-3 text-slate-500 text-xs">${TKQC_LAST_SYNC[t.id] || '—'}</td>
           </tr>
         `;
       }).join('');
     })();
 
-    // 9. Render bảng Fanpage (read-only)
+    // 10. Render bảng Fanpage (có scroll)
     (function renderFanpage() {
       const tbody = document.getElementById('fp-tbody');
       if (MY_FANPAGE.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 text-sm">Chưa có Fanpage nào</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="3" class="text-center py-8 text-slate-400 text-sm">Chưa có Fanpage nào</td></tr>`;
         return;
       }
       tbody.innerHTML = MY_FANPAGE.map((f) => `
@@ -273,40 +407,167 @@
           <td class="px-4 py-3 font-medium text-[#060D10]">${f.ten}</td>
           <td class="px-4 py-3 text-slate-700">${formatNumber(f.followers)}</td>
           <td class="px-4 py-3">${fpStatusBadge(f.trangThai)}</td>
-          <td class="px-4 py-3 text-slate-500 text-xs">${f.dongBoLanCuoi}</td>
         </tr>
       `).join('');
     })();
 
-    // 10. Footer info — Nhân sự phụ trách
-    (function renderNSInfo() {
-      const ns = nsByEmail[myKH.nhanSuPhuTrach];
-      const container = document.getElementById('ns-info');
-      if (!ns) {
-        container.innerHTML = `<p class="text-sm text-slate-500">Chưa có nhân sự phụ trách</p>`;
-        return;
-      }
-      const initial = ns.ten.charAt(0).toUpperCase();
-      container.innerHTML = `
-        <div class="w-12 h-12 rounded-full bg-[#21A691] text-white flex items-center justify-center text-lg font-bold flex-shrink-0">
-          ${initial}
+    // 11. Liên hệ hỗ trợ
+    (function renderSupport() {
+      const nsName = myNS ? myNS.ten : '—';
+      const nsEmail = myNS ? myNS.email : myKH.nhanSuPhuTrach;
+      const nsInitial = nsName.charAt(0).toUpperCase();
+      document.getElementById('support-section').innerHTML = `
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="flex items-start gap-3 flex-1 min-w-[280px]">
+            <div class="w-10 h-10 rounded-lg bg-[#21A691]/10 text-[#21A691] flex items-center justify-center flex-shrink-0">
+              <i data-lucide="life-buoy" class="w-5 h-5"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base font-semibold text-[#060D10]">Cần hỗ trợ?</h3>
+              <p class="text-sm text-slate-600 mt-0.5">Liên hệ nhân sự phụ trách của bạn:</p>
+              <div class="flex items-center gap-2 mt-2">
+                <div class="w-8 h-8 rounded-full bg-[#21A691] text-white flex items-center justify-center text-sm font-bold flex-shrink-0">
+                  ${nsInitial}
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-medium text-[#060D10] truncate">${nsName}</p>
+                  <p class="text-xs text-slate-500 truncate">${nsEmail}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button onclick="sendSupportRequest()" type="button"
+            class="bg-[#21A691] hover:bg-[#1A8A78] text-white font-medium px-4 py-2.5 rounded-lg flex items-center gap-2 transition shadow-sm flex-shrink-0">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            Gửi yêu cầu hỗ trợ
+          </button>
         </div>
-        <div class="flex-1 min-w-0">
-          <p class="text-xs text-slate-500">Nhân sự phụ trách của bạn</p>
-          <p class="text-sm font-semibold text-[#060D10] truncate">${ns.ten}</p>
-          <p class="text-xs text-slate-500 mt-0.5 truncate">
-            <i data-lucide="mail" class="inline w-3 h-3 mr-1 align-text-bottom"></i>${ns.email}
-          </p>
-        </div>
-        <p class="text-xs text-slate-500 self-center hidden md:flex items-center gap-1.5 max-w-[200px]">
-          <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0"></i>
-          <span>Liên hệ nhân sự phụ trách nếu có vấn đề về tài nguyên</span>
-        </p>
       `;
       refreshIcons();
     })();
 
-    // Render Lucide cho lần đầu (sau khi mọi block đã đẩy HTML vào)
+    // 12. Modal TKQC — xem tất cả (có pagination)
+    const MODAL_IPP = 10;
+
+    function openTkqcModal() {
+      document.getElementById('modal-tkqc').classList.remove('hidden');
+      renderTkqcPage(1);
+    }
+    function renderTkqcPage(page) {
+      const pageInfo = paginate(MY_TKQC, page, MODAL_IPP);
+      const tbody = document.getElementById('modal-tkqc-tbody');
+      if (pageInfo.total === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center py-8 text-slate-400 text-sm">Chưa có TKQC nào</td></tr>`;
+      } else {
+        tbody.innerHTML = pageInfo.items.map((t, idx) => {
+          const stt = (pageInfo.currentPage - 1) * MODAL_IPP + idx + 1;
+          const pct = t.hanMuc > 0 ? (t.chiTieu / t.hanMuc) * 100 : 0;
+          const barColor = progressColor(pct);
+          const isDisabled = t.trangThai === 'disabled';
+          const rowCls = isDisabled ? 'opacity-60' : '';
+          const badge = isDisabled
+            ? `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-600">Vô hiệu</span>`
+            : `<span class="inline-flex px-2 py-0.5 rounded-full text-xs font-medium" style="background-color: #D1FAE5; color: #21A691;">Hoạt động</span>`;
+          return `
+            <tr class="hover:bg-[#F0F4F4] ${rowCls}">
+              <td class="px-4 py-3 text-slate-500 text-center">${stt}</td>
+              <td class="px-4 py-3 font-medium text-[#060D10]">${t.ten}</td>
+              <td class="px-4 py-3 text-sm text-slate-600">${formatDate(t.ngayBatDauThue)}</td>
+              <td class="px-4 py-3 text-slate-700">${formatVND(t.hanMuc)}</td>
+              <td class="px-4 py-3 text-slate-700">${formatVND(t.chiTieu)}</td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden min-w-[80px]">
+                    <div class="h-full" style="width: ${pct}%; background-color: ${barColor};"></div>
+                  </div>
+                  <span class="text-xs font-medium flex-shrink-0" style="color: ${barColor};">${pct.toFixed(0)}%</span>
+                </div>
+              </td>
+              <td class="px-4 py-3">${badge}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+      renderPagination('modal-tkqc-pagination', pageInfo, (newPage) => {
+        renderTkqcPage(newPage);
+        document.getElementById('modal-tkqc-body').scrollTop = 0;
+      });
+      refreshIcons();
+    }
+    function closeTkqcModal() {
+      document.getElementById('modal-tkqc').classList.add('hidden');
+    }
+
+    // 13. Modal Fanpage — xem tất cả (có pagination)
+    function openFpModal() {
+      document.getElementById('modal-fp').classList.remove('hidden');
+      renderFpPage(1);
+    }
+    function renderFpPage(page) {
+      const pageInfo = paginate(MY_FANPAGE, page, MODAL_IPP);
+      const tbody = document.getElementById('modal-fp-tbody');
+      if (pageInfo.total === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 text-sm">Chưa có Fanpage nào</td></tr>`;
+      } else {
+        tbody.innerHTML = pageInfo.items.map((f, idx) => {
+          const stt = (pageInfo.currentPage - 1) * MODAL_IPP + idx + 1;
+          const isRestricted = f.trangThai === 'restricted';
+          const statusCell = isRestricted
+            ? `<td class="px-4 py-3">
+                 ${fpStatusBadge(f.trangThai)}
+                 <p class="text-xs text-red-500 mt-1">Vui lòng liên hệ nhân sự phụ trách</p>
+               </td>`
+            : `<td class="px-4 py-3">${fpStatusBadge(f.trangThai)}</td>`;
+          return `
+            <tr class="hover:bg-[#F0F4F4]">
+              <td class="px-4 py-3 text-slate-500 text-center">${stt}</td>
+              <td class="px-4 py-3 font-medium text-[#060D10]">${f.ten}</td>
+              <td class="px-4 py-3 text-slate-700">${formatNumber(f.followers)}</td>
+              ${statusCell}
+            </tr>
+          `;
+        }).join('');
+      }
+      renderPagination('modal-fp-pagination', pageInfo, (newPage) => {
+        renderFpPage(newPage);
+        document.getElementById('modal-fp-body').scrollTop = 0;
+      });
+      refreshIcons();
+    }
+    function closeFpModal() {
+      document.getElementById('modal-fp').classList.add('hidden');
+    }
+
+    // 14. ESC đóng modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { closeTkqcModal(); closeFpModal(); }
+    });
+
+    // 15. Toast
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const icon = document.getElementById('toast-icon');
+      document.getElementById('toast-message').textContent = message;
+      const cfg = {
+        success: { icon: 'check-circle-2', color: '#21A691' },
+        warning: { icon: 'alert-triangle', color: '#F59E0B' },
+        error:   { icon: 'x-circle',       color: '#EF4444' }
+      }[type] || { icon: 'check-circle-2', color: '#21A691' };
+      icon.setAttribute('data-lucide', cfg.icon);
+      icon.style.color = cfg.color;
+      toast.classList.remove('hidden');
+      toast.classList.remove('toast-show');
+      void toast.offsetWidth;
+      toast.classList.add('toast-show');
+      refreshIcons();
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+    function sendSupportRequest() {
+      showToast('Yêu cầu đã được gửi đến nhân sự phụ trách');
+    }
+
+    // Render Lucide lần đầu
     refreshIcons();
   </script>
 </body>

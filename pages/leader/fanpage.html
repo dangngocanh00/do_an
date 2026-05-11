@@ -457,9 +457,14 @@
       } else {
         tbody.innerHTML = pageInfo.items.map((f, idx) => {
           const tenKH = khMap[f.maKH] || '—';
-          // Row class: highlight đỏ khi đang xử lý cảnh báo
+          // Row class: alert highlight ưu tiên, sau đó theo trạng thái
           const isAlerted = window.__highlightedFp === f.ten;
-          const rowClass = isAlerted ? 'bg-red-50 border-l-4 border-l-red-500' : '';
+          const isRestricted = f.trangThai === 'restricted';
+          const isDisabled = f.trangThai === 'disabled';
+          const rowClass = isAlerted    ? 'bg-red-50 border-l-4 border-l-red-500'
+                         : isDisabled   ? 'bg-red-50'
+                         : isRestricted ? 'bg-yellow-50'
+                         : '';
           const stt = (currentPage - 1) * ITEMS_PER_PAGE + idx + 1;
           return `
             <tr class="${rowClass} hover:bg-[#F0F4F4]" data-fp-row="${f.ten}">
