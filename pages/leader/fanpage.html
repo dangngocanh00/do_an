@@ -119,6 +119,7 @@
                 <th class="text-left font-medium px-4 py-3">Khách hàng</th>
                 <th class="text-left font-medium px-4 py-3">Followers</th>
                 <th class="text-left font-medium px-4 py-3">Trạng thái</th>
+                <th class="text-left font-medium px-4 py-3">Trạng thái gán</th>
                 <th class="text-left font-medium px-4 py-3">Đồng bộ lần cuối</th>
                 <th class="text-right font-medium px-4 py-3">Thao tác</th>
               </tr>
@@ -377,6 +378,14 @@
     // Lookup TKQC theo "tên" (FANPAGE_TKQC dùng dạng "TKQC_001" trùng với field ten)
     const tkqcByTen = Object.fromEntries(TKQC.map((t) => [t.ten, t]));
 
+    // Badge trạng thái gán KH
+    function assignBadge(maKH) {
+      if (maKH) {
+        return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #E1F5EE; color: #085041;">Đã gán</span>`;
+      }
+      return `<span class="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium" style="background-color: #F1F5F9; color: #64748B;">Chưa gán</span>`;
+    }
+
     // Badge trạng thái Fanpage (3 trạng thái)
     function statusBadge(trangThai) {
       const cfg = {
@@ -448,7 +457,7 @@
 
       if (pageInfo.total === 0) {
         tbody.innerHTML = `
-          <tr><td colspan="8" class="text-center py-10 text-slate-400 text-sm">
+          <tr><td colspan="9" class="text-center py-10 text-slate-400 text-sm">
             <div class="flex flex-col items-center gap-2">
               <i data-lucide="search-x" class="w-8 h-8 text-slate-300"></i>
               Không tìm thấy Fanpage phù hợp
@@ -474,6 +483,7 @@
               <td class="px-4 py-3 text-slate-700">${tenKH}</td>
               <td class="px-4 py-3 text-slate-700">${formatNumber(f.followers)}</td>
               <td class="px-4 py-3">${statusBadge(f.trangThai)}</td>
+              <td class="px-4 py-3">${assignBadge(f.maKH)}</td>
               <td class="px-4 py-3 text-slate-500 text-xs">${f.dongBoLanCuoi}</td>
               <td class="px-4 py-3">
                 <div class="flex items-center justify-end gap-1">
